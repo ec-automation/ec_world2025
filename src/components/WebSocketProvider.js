@@ -11,7 +11,7 @@ export function WebSocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io("ws://localhost:4001"); // Cambia si lo alojas en producción
+    const newSocket = io("ws://localhost:4000"); // Cambia si lo alojas en producción
     setSocket(newSocket);
 
     newSocket.on("connect", () => {

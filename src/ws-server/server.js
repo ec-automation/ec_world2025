@@ -1,30 +1,69 @@
-const http = require("http");
-const { Server } = require("socket.io");
+import dotenv from "dotenv";
+dotenv.config({ path: '../.env.local' });
+console.log("Environment Variables Loaded:", process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET);
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import stripePackage from "stripe";
+import bodyParser from "body-parser";
+import cors from "cors";
 
-const httpServer = http.createServer();
+const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
+
+const app = express();
+const httpServer = http.createServer(app);
+
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: "*", // ajusta esto si tienes dominio de producción
   },
 });
 
-io.on("connection", (socket) => {
-  console.log("🧠 Cliente conectado");
+app.use(cors());
 
-  // Ejemplo: enviar mensaje de pago confirmado después de 3 segundos
-  setTimeout(() => {
-    socket.emit("payment-confirmed", {
-      orderId: "1234",
-      message: "Gracias por tu compra 🎉",
-    });
-  }, 3000);
+// WebSocket connection
+io.on("connection", (socket) => {
+  console.log("🧠 Cliente conectado vía WebSocket");
 
   socket.on("disconnect", () => {
     console.log("👋 Cliente desconectado");
   });
 });
 
-httpServer.listen(4001, () => {
-  console.log("🚀 WebSocket server escuchando en puerto 4001");
+// Stripe Webhook route
+app.use("/webhook", bodyParser.raw({ type: "application/json" }));
+
+app.post("/webhook", (req, res) => {
+  const sig = req.headers["stripe-signature"];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error("❌ Verificación fallida:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+
+    io.emit("payment-confirmed", {
+      customer: session.customer_email,
+      amount: session.amount_total / 100,
+      message: "✅ Pago confirmado vía Stripe",
+    });
+
+    console.log("📢 Emitido: payment-confirmed", session.customer_email);
+  }
+
+  res.status(200).send("OK");
 });
 
+// Start server
+httpServer.listen(4000, () => {
+  console.log("🚀 WebSocket + Stripe webhook en http://localhost:4000");
+});
