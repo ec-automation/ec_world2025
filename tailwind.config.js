@@ -1,10 +1,16 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
+  // ⬅️ pon tus rutas como estaban
   content: [
-    "./src/**/*.{js,jsx,ts,tsx}", // Asegúrate de que estas rutas coincidan con tus archivos
+    "./src/app/**/*.{js,ts,jsx,tsx}",
+    "./src/components/**/*.{js,ts,jsx,tsx}",
   ],
+
+  // ⭐ ESTA LÍNEA NUEVA
+  presets: [require("@tailwindcss/preset-classic")],
+
   theme: {
     extend: {},
   },
   plugins: [],
-}
+};

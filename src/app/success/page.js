@@ -1,7 +1,9 @@
 "use client";
+/**  ⬅️  nada antes de esto **/
 
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
+
 
 export default function SuccessPage() {
   const { t } = useTranslation();
