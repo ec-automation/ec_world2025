@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "../components/Providers";
-import "../styles/globals.css";
+import "./globals.css";
 
 
 

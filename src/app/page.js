@@ -21,9 +21,7 @@ function InnerPage() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 ">
-      <div className="p-12 m-60 text-red-400">
-        <h1>Hellox</h1>
-      </div>
+      
       <h1 className="text-3xl font-bold mb-4">{t("welcome_message")}</h1>
       <button
         onClick={handleBuy}
