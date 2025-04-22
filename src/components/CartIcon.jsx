@@ -1,39 +1,28 @@
-import { useState, useEffect } from "react";
-import { useWebSocketContext } from "./WebSocketProvider";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
+'use client';
+import { useEffect, useState } from 'react';
+import { useSocket } from './WebSocketProvider'; // Asegúrate de importar correctamente
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 
 const CartIcon = () => {
-  const { sendMessage } = useWebSocketContext(); // ✅ Solo llamamos el hook una vez
+  const { sendMessage, onMessage, isConnected } = useSocket();
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    const handleCartUpdate = (data) => {
-      if (data.type === "cart_update") {
-        setCartCount(data.totalItems);
+    // Escuchar actualizaciones del carrito
+    onMessage('cart_update', (data) => {
+      if (data?.type === 'cart_update') {
+        setCartCount(data.totalItems || 0);
       }
-    };
+    });
+  }, [onMessage]);
 
-    const socketRef = window.socketRef || null; // 🔹 Obtiene el socket globalmente
-    if (socketRef) {
-      // Wait for the socket to connect before sending the message
-      if (socketRef.connected) {
-        sendMessage({ type: "get_cart_count" }); // ✅ Pedimos la cantidad al backend
-        console.log("get_cart_count sent");
-      } else {
-        socketRef.on('connect', () => {
-          sendMessage({ type: "get_cart_count" });
-          console.log("get_cart_count sent2");
-        });
-      }
-      socketRef.on("cart_update", handleCartUpdate);
+  useEffect(() => {
+    if (isConnected) {
+      // Pedir la cantidad del carrito al conectar
+      sendMessage('get_cart_count', {});
+      console.log('📤 Mensaje get_cart_count enviado');
     }
-
-    return () => {
-      if (socketRef) {
-        socketRef.off("cart_update", handleCartUpdate);
-      }
-    };
-  }, [sendMessage]);
+  }, [isConnected, sendMessage]);
 
   return (
     <div className="relative cursor-pointer">

@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 
 const SocketContext = createContext(null);
 
-export const WebSocketProvider = ({ children }) => {
+export const SocketProvider = ({ children }) => {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -32,7 +32,7 @@ export const WebSocketProvider = ({ children }) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(event, payload);
     } else {
-      console.warn('⚠️ Socket no conectado');
+      console.warn('🔌 Socket no conectado');
     }
   };
 
