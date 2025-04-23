@@ -13,10 +13,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import CustomNodeComponent from './CustomNodeComponent';
 
-const nodeTypes = {
-  customNode: CustomNodeComponent,
-};
-
+const nodeTypes = { customNode: CustomNodeComponent };
 const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
@@ -25,51 +22,48 @@ function GraphContent({ theme }) {
     if (typeof window === 'undefined') return null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      console.log('[LOAD] LocalStorage raw:', raw);
-      const parsed = JSON.parse(raw);
-      console.log('[LOAD] Parsed graph:', parsed);
-      return parsed;
+      return JSON.parse(raw);
     } catch (err) {
-      console.warn('[LOAD ERROR]', err);
       return null;
     }
   }, []);
 
   const defaultNodes = [
-    { id: '1', position: { x: 0, y: 50 }, data: { label: 'Landing Page' }, type: 'customNode' },
-    { id: '2', position: { x: 200, y: 50 }, data: { label: 'Store' }, type: 'customNode' },
-    { id: '3', position: { x: 400, y: 50 }, data: { label: 'Product' }, type: 'customNode' },
-    { id: '4', position: { x: 600, y: 50 }, data: { label: 'Cart' }, type: 'customNode' },
-    { id: '5', position: { x: 800, y: 50 }, data: { label: 'Checkout' }, type: 'customNode' },
-    { id: '6', position: { x: 1000, y: 50 }, data: { label: 'Payment' }, type: 'customNode' },
+    { id: '1', position: { x: 0, y: 50 }, data: { label: 'Landing Page', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '2', position: { x: 200, y: 50 }, data: { label: 'Store', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '3', position: { x: 400, y: 50 }, data: { label: 'Product', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '4', position: { x: 600, y: 50 }, data: { label: 'Cart', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '5', position: { x: 800, y: 50 }, data: { label: 'Checkout', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '6', position: { x: 1000, y: 50 }, data: { label: 'Payment', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
   ];
 
   const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || defaultNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(savedData?.edges || []);
   const [idCounter, setIdCounter] = useState(7);
+  const [showModal, setShowModal] = useState(false);
+  const [promptText, setPromptText] = useState('');
+  const [selectedNode, setSelectedNode] = useState(null);
 
   const onConnect = useCallback(
     (connection) => {
-      console.log('[CONNECT] New connection:', connection);
-      setEdges((eds) => {
-        const updated = addEdge(connection, eds);
-        console.log('[CONNECT] Updated edges:', updated);
-        return updated;
-      });
-    },
-    [setEdges]
+      setEdges((eds) => addEdge(connection, eds));
+    }, [setEdges]
   );
 
   const onMoveEnd = useCallback((viewport) => {
     localStorage.setItem(VIEWPORT_KEY, JSON.stringify(viewport));
-    console.log('[VIEWPORT] Saved:', viewport);
   }, []);
+
+  const onEdgeClick = useCallback((event, edge) => {
+    event.stopPropagation();
+    setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+  }, [setEdges]);
 
   const handleAddNode = () => {
     const newId = `${idCounter}`;
     const newNode = {
       id: newId,
-      data: { label: `Node ${newId}` },
+      data: { label: `Node ${newId}`, backgroundColor: '#f1f5f9', borderRadius: '8px' },
       position: { x: Math.random() * 400, y: Math.random() * 300 },
       type: 'customNode',
     };
@@ -88,10 +82,15 @@ function GraphContent({ theme }) {
     setNodes([]);
   };
 
+  const handleModalSubmit = () => {
+    console.log('[PROMPT SUBMIT]', promptText);
+    setShowModal(false);
+    setPromptText('');
+  };
+
   useEffect(() => {
     const data = JSON.stringify({ nodes, edges });
     localStorage.setItem(STORAGE_KEY, data);
-    console.log('[SAVE] Graph saved:', data);
   }, [nodes, edges]);
 
   useEffect(() => {
@@ -100,25 +99,59 @@ function GraphContent({ theme }) {
   }, [theme]);
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onMoveEnd={onMoveEnd}
-      fitView 
-    >
-      <MiniMap />
-      <Controls />
-      <Background />
-      <Panel position="top-left">
-        <button onClick={handleAddNode} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
-        <button onClick={handleDelete} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
-        <button onClick={handleReset} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
-      </Panel>
-    </ReactFlow>
+    <>
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-lg w-96">
+            <h2 className="text-lg font-bold mb-2 text-black dark:text-white">Ingresa tu prompt</h2>
+            <textarea
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              className="w-full p-2 rounded border dark:bg-slate-700 dark:text-white"
+              rows={4}
+              placeholder="Ej. Crea un sistema de reservas con login y pagos"
+            />
+            <div className="flex justify-end mt-2">
+              <button
+                className="bg-gray-500 text-white px-3 py-1 rounded mr-2"
+                onClick={() => setShowModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="bg-green-600 text-white px-3 py-1 rounded"
+                onClick={handleModalSubmit}
+              >
+                Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onMoveEnd={onMoveEnd}
+        onEdgeClick={onEdgeClick}
+        onNodeDoubleClick={(event, node) => setSelectedNode(node)}
+        fitView
+      >
+        {/* <MiniMap /> */}
+        <Controls />
+        <Background />
+        <Panel position="top-left">
+          <button onClick={handleAddNode} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
+          <button onClick={handleDelete} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
+          <button onClick={handleReset} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
+          <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
+        </Panel>
+      </ReactFlow>
+    </>
   );
 }
 

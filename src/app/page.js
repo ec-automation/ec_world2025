@@ -28,9 +28,9 @@ function InnerPage() {
       <div className="bg-white dark:bg-black text-black dark:text-white p-4 rounded">
         Prueba de modo oscuro 🌙
       </div>
-      <div className="p-4 text-xl font-bold text-center bg-white text-black dark:bg-purple-900 dark:text-yellow-300">
+{/*       <div className="p-4 text-xl font-bold text-center bg-white text-black dark:bg-purple-900 dark:text-yellow-300">
       Test visual 🌗 Modo Claro / Oscuro
-      </div>
+      </div> */}
 
      <h1 className="text-3xl font-bold mb-4 text-white">{t("welcome_message")}</h1>
      <GraphEditor />
@@ -41,9 +41,9 @@ function InnerPage() {
        {t("buy_now")}
      </button>
    </div>
-   <footer className="p-4 bg-gray-800 text-white text-center">
+{/*    <footer className="p-4 bg-gray-800 text-white text-center">
      Footer Content
-   </footer>
+   </footer> */}
  </main>
   );
 }
