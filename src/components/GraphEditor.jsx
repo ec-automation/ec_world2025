@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSocket } from '../components/WebSocketProvider';
 import ReactFlow, {
@@ -14,6 +15,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import CustomNodeComponent from './CustomNodeComponent';
 import GraphSidebarPalette from './GraphSidebarPalette';
+import NodeEditModal from './NodeEditModal';
 
 const nodeTypes = { customNode: CustomNodeComponent };
 const STORAGE_KEY = 'ec-flow-data';
@@ -34,10 +36,10 @@ function GraphContent({ theme }) {
 
   const defaultNodes = [
     { id: '1', position: { x: 0, y: 50 }, data: { label: 'Landing Page', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '2', position: { x: 200, y: 50 }, data: { label: 'Store', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '3', position: { x: 400, y: 50 }, data: { label: 'Product', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '4', position: { x: 600, y: 50 }, data: { label: 'Cart', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '5', position: { x: 800, y: 50 }, data: { label: 'Checkout', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '2', position: { x:  200, y: 50 }, data: { label: 'Store', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '3', position: { x:  400, y: 50 }, data: { label: 'Product', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '4', position: { x:  600, y: 50 }, data: { label: 'Cart', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '5', position: { x:  800, y: 50 }, data: { label: 'Checkout', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
     { id: '6', position: { x: 1000, y: 50 }, data: { label: 'Payment', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
   ];
 
@@ -101,7 +103,6 @@ function GraphContent({ theme }) {
       edges: currentEdges,
     });
 
-
     sendMessage('generate-graph', {
       prompt: promptText,
       current: {
@@ -141,6 +142,15 @@ function GraphContent({ theme }) {
     document.documentElement.classList.add(theme);
   }, [theme]);
 
+  const handleNodeEdit = (id, newLabel) => {
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, label: newLabel } } : node
+      )
+    );
+    setSelectedNode(null);
+  };
+
   return (
     <div className="flex h-full w-full">
       <GraphSidebarPalette />
@@ -174,6 +184,14 @@ function GraphContent({ theme }) {
         </div>
       )}
 
+      {selectedNode && (
+        <NodeEditModal
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
+          onSave={handleNodeEdit}
+        />
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -186,7 +204,6 @@ function GraphContent({ theme }) {
         onNodeDoubleClick={(event, node) => setSelectedNode(node)}
         fitView
       >
-        {/* <MiniMap /> */}
         <Controls />
         <Background />
         <Panel position="top-right">
