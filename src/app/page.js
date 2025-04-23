@@ -29,7 +29,7 @@ function InnerPage() {
 
    </div>
    <footer className="p-4 bg-black text-white text-center">
-   <p className="font-bold mb-4 text-white">{t("welcome_message")}</p>
+   <p className=" mb-4 text-gray-600">{t("Copyright")}</p>
    </footer> 
 
  </main>

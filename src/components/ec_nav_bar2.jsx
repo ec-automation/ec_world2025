@@ -46,9 +46,9 @@ export const Ec_nav_bar = () => {
       </a>
 
       <div className="col-span-2 grid grid-cols-3 md:grid-cols-7">
-        <div className="text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/home")}>Home</div>
-        <div className="text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/hospital")}>Hospital</div>
-        <div className="hidden md:inline text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/about_us")}>About Us</div>
+        <div className="text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/")}>{t("AI_Agent")}</div>
+        <div className="text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/")}>Hospital</div>
+        <div className="hidden md:inline text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/about_us")}>{t("About_Us")}</div>
 
         <div className="self-center justify-self-end mr-4 cursor-pointe text-white" onClick={toggleTheme}>
         {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
