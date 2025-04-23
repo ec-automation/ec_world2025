@@ -28,6 +28,29 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("👋 Cliente desconectado");
   });
+
+  socket.on("generate-graph", ({ prompt }) => {
+    console.log("📩 Prompt recibido:", prompt);
+  
+    // TODO: Aquí irá la llamada real a OpenAI
+  
+    // Por ahora respondemos con nodos ficticios para testear:
+    const response = {
+      nodes: [
+        { id: 'n1', data: { label: 'Inicio' }, position: { x: 0, y: 50 }, type: 'customNode' },
+        { id: 'n2', data: { label: 'Proceso' }, position: { x: 200, y: 50 }, type: 'customNode' },
+        { id: 'n3', data: { label: 'Fin' }, position: { x: 400, y: 50 }, type: 'customNode' },
+      ],
+      edges: [
+        { id: 'e1-2', source: 'n1', target: 'n2' },
+        { id: 'e2-3', source: 'n2', target: 'n3' },
+      ],
+    };
+  
+    socket.emit("graph-response", response);
+  });
+  
+
 });
 
 // Stripe Webhook route

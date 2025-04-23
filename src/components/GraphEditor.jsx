@@ -1,5 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSocket } from '../components/WebSocketProvider';
 import ReactFlow, {
   Background,
   Controls,
@@ -18,6 +19,7 @@ const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
 function GraphContent({ theme }) {
+  const { sendMessage } = useSocket();
   const savedData = useMemo(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -84,6 +86,7 @@ function GraphContent({ theme }) {
 
   const handleModalSubmit = () => {
     console.log('[PROMPT SUBMIT]', promptText);
+    sendMessage('generate-graph', { prompt: promptText });
     setShowModal(false);
     setPromptText('');
   };
@@ -141,7 +144,7 @@ function GraphContent({ theme }) {
         onNodeDoubleClick={(event, node) => setSelectedNode(node)}
         fitView
       >
-        {/* <MiniMap /> */}
+        <MiniMap />
         <Controls />
         <Background />
         <Panel position="top-left">

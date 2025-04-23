@@ -25,21 +25,22 @@ function InnerPage() {
  <main className="flex flex-col min-h-screen">
    <Ec_nav_bar />
    <div className="flex-grow flex flex-col items-center justify-center p-6">
-      <div className="bg-white dark:bg-black text-black dark:text-white p-4 rounded">
-        Prueba de modo oscuro 🌙
-      </div>
+
 {/*       <div className="p-4 text-xl font-bold text-center bg-white text-black dark:bg-purple-900 dark:text-yellow-300">
       Test visual 🌗 Modo Claro / Oscuro
       </div> */}
 
-     <h1 className="text-3xl font-bold mb-4 text-white">{t("welcome_message")}</h1>
-     <GraphEditor />
-     <button
-       onClick={handleBuy}
-       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-     >
+     <button onClick={handleBuy} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
        {t("buy_now")}
      </button>
+
+     <h1 className="text-3xl font-bold mb-4 text-white">{t("welcome_message")}</h1>
+     <GraphEditor />
+
+     <div className="bg-white dark:bg-black text-black dark:text-white p-4 rounded">
+        Prueba de modo oscuro 🌙
+      </div>
+
    </div>
 {/*    <footer className="p-4 bg-gray-800 text-white text-center">
      Footer Content
