@@ -10,17 +10,6 @@ import GraphEditor from '@/components/GraphEditor';
 function InnerPage() {
   const { t } = useTranslation();
 
-  const handleBuy = async () => {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priceId: "price_1RFbSbIW5IjCzrzLcZLxH7jr" }),
-    });
-
-    const data = await res.json();
-    if (data?.url) window.location.href = data.url;
-  };
-
   return (
  <main className="flex flex-col min-h-screen">
    <Ec_nav_bar />
@@ -30,21 +19,19 @@ function InnerPage() {
       Test visual 🌗 Modo Claro / Oscuro
       </div> */}
 
-     <button onClick={handleBuy} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
-       {t("buy_now")}
-     </button>
 
-     <h1 className="text-3xl font-bold mb-4 text-white">{t("welcome_message")}</h1>
+
      <GraphEditor />
 
-     <div className="bg-white dark:bg-black text-black dark:text-white p-4 rounded">
+{/*      <div className="bg-white dark:bg-black text-black dark:text-white p-4 rounded">
         Prueba de modo oscuro 🌙
-      </div>
+      </div> */}
 
    </div>
-{/*    <footer className="p-4 bg-gray-800 text-white text-center">
-     Footer Content
-   </footer> */}
+   <footer className="p-4 bg-black text-white text-center">
+   <p className="font-bold mb-4 text-white">{t("welcome_message")}</p>
+   </footer> 
+
  </main>
   );
 }

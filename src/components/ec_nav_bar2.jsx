@@ -18,6 +18,17 @@ export const Ec_nav_bar = () => {
     i18n.changeLanguage(lng);
   };
 
+  const handleBuy = async () => {
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ priceId: "price_1RFbSbIW5IjCzrzLcZLxH7jr" }),
+    });
+
+    const data = await res.json();
+    if (data?.url) window.location.href = data.url;
+  };
+
   useEffect(() => {
     console.log(`Current language: ${i18n.language}`);
   }, [i18n.language]);
@@ -34,10 +45,11 @@ export const Ec_nav_bar = () => {
         <img src="./system_images/Ec_automation_logo.png" className="h-12 w-full object-contain" alt="Logo" />
       </a>
 
-      <div className="col-span-2 grid grid-cols-3 md:grid-cols-6">
+      <div className="col-span-2 grid grid-cols-3 md:grid-cols-7">
         <div className="text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/home")}>Home</div>
         <div className="text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/hospital")}>Hospital</div>
         <div className="hidden md:inline text-white cursor-pointer self-center place-self-center" onClick={() => router.push("/about_us")}>About Us</div>
+
         <div className="self-center justify-self-end mr-4 cursor-pointe text-white" onClick={toggleTheme}>
         {theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
         </div>
@@ -51,6 +63,7 @@ export const Ec_nav_bar = () => {
             <option value="zh">中文</option>
           </select>
         </div>
+        <button onClick={handleBuy} className="bg-blue-600 text-white rounded hover:bg-blue-700 transition">{t("buy_now")}</button>
       </div>
 
       <div className="text-white col-start-4 w-20 justify-self-end self-center">

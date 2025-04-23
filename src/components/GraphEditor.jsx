@@ -13,6 +13,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import CustomNodeComponent from './CustomNodeComponent';
+import GraphSidebarPalette from './GraphSidebarPalette';
 
 const nodeTypes = { customNode: CustomNodeComponent };
 const STORAGE_KEY = 'ec-flow-data';
@@ -20,13 +21,14 @@ const VIEWPORT_KEY = 'ec-viewport';
 
 function GraphContent({ theme }) {
   const { sendMessage, onMessage } = useSocket();
-  const savedData = useMemo(() => {
-    if (typeof window === 'undefined') return null;
+  const [savedData, setSavedData] = useState(null);
+
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return JSON.parse(raw);
+      setSavedData(JSON.parse(raw));
     } catch (err) {
-      return null;
+      console.error('Error loading localStorage data:', err);
     }
   }, []);
 
@@ -85,14 +87,34 @@ function GraphContent({ theme }) {
   };
 
   const handleModalSubmit = () => {
-    console.log('[PROMPT SUBMIT]', promptText);
-    sendMessage('generate-graph', { prompt: promptText });
+    if (!promptText.trim()) {
+      console.warn('⚠️ El prompt está vacío, no se envía.');
+      return;
+    }
+
+    const currentNodes = [...nodes];
+    const currentEdges = [...edges];
+
+    console.log('[PROMPT SUBMIT]', {
+      prompt: promptText,
+      nodes: currentNodes,
+      edges: currentEdges,
+    });
+
+
+    sendMessage('generate-graph', {
+      prompt: promptText,
+      current: {
+        nodes: currentNodes,
+        edges: currentEdges,
+      },
+    });
     setShowModal(false);
     setPromptText('');
   };
 
   useEffect(() => {
-    onMessage('graph-response', (data) => {
+    const handler = (data) => {
       console.log('📥 Respuesta de IA:', data);
       if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
         setNodes(data.nodes);
@@ -100,7 +122,13 @@ function GraphContent({ theme }) {
       } else {
         console.warn('❌ Formato de datos inválido:', data);
       }
-    });
+    };
+
+    onMessage('graph-response', handler);
+    return () => {
+      const socket = document.querySelector('[data-socket]');
+      socket?.off?.('graph-response', handler);
+    };
   }, [onMessage, setNodes, setEdges]);
 
   useEffect(() => {
@@ -114,10 +142,12 @@ function GraphContent({ theme }) {
   }, [theme]);
 
   return (
-    <>
-      {showModal && (
+    <div className="flex h-full w-full">
+      <GraphSidebarPalette />
+      <div className="flex-1 h-full relative">
+        {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 p-4 rounded shadow-lg w-96">
+          <div className="bg-white dark:bg-black p-4 rounded shadow-lg w-96">
             <h2 className="text-lg font-bold mb-2 text-black dark:text-white">Ingresa tu prompt</h2>
             <textarea
               value={promptText}
@@ -156,17 +186,18 @@ function GraphContent({ theme }) {
         onNodeDoubleClick={(event, node) => setSelectedNode(node)}
         fitView
       >
-        <MiniMap />
+        {/* <MiniMap /> */}
         <Controls />
         <Background />
-        <Panel position="top-left">
+        <Panel position="top-right">
           <button onClick={handleAddNode} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
           <button onClick={handleDelete} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
           <button onClick={handleReset} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
           <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
         </Panel>
       </ReactFlow>
-    </>
+    </div>
+    </div>
   );
 }
 
@@ -177,7 +208,7 @@ export default function GraphEditor() {
   });
 
   return (
-    <div className="w-full h-[600px] bg-white dark:bg-slate-900 rounded shadow overflow-hidden">
+    <div className="w-full h-[600px] bg-white dark:bg-black rounded shadow overflow-hidden">
       <ReactFlowProvider>
         <GraphContent theme={theme} />
       </ReactFlowProvider>

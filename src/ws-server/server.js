@@ -29,8 +29,13 @@ io.on("connection", (socket) => {
     console.log("👋 Cliente desconectado");
   });
 
-  socket.on("generate-graph", ({ prompt }) => {
+  socket.on("generate-graph", ( data ) => {
+    const { prompt, current } = data;
+    const { nodes, edges } = current || {};
+  
     console.log("📩 Prompt recibido:", prompt);
+    console.log("📦 Nodos recibidos:", JSON.stringify(nodes, null, 2));
+    console.log("🔗 Conexiones recibidas:", JSON.stringify(edges, null, 2));
   
     // TODO: Aquí irá la llamada real a OpenAI
   
