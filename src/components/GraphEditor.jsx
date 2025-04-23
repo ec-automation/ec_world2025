@@ -19,7 +19,7 @@ const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
 function GraphContent({ theme }) {
-  const { sendMessage } = useSocket();
+  const { sendMessage, onMessage } = useSocket();
   const savedData = useMemo(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -90,6 +90,18 @@ function GraphContent({ theme }) {
     setShowModal(false);
     setPromptText('');
   };
+
+  useEffect(() => {
+    onMessage('graph-response', (data) => {
+      console.log('📥 Respuesta de IA:', data);
+      if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
+        setNodes(data.nodes);
+        setEdges(data.edges);
+      } else {
+        console.warn('❌ Formato de datos inválido:', data);
+      }
+    });
+  }, [onMessage, setNodes, setEdges]);
 
   useEffect(() => {
     const data = JSON.stringify({ nodes, edges });
