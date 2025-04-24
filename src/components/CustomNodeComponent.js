@@ -12,10 +12,17 @@ function CustomNodeComponent({ data }) {
         fontWeight: 'bold',
         fontFamily: 'Arial',
         minWidth: 100,
+        maxWidth: 220,
+        overflowWrap: 'break-word',
       }}
     >
       <div style={{ fontSize: 24 }}>{data.icon || '⬤'}</div>
       <div>{data.label}</div>
+      {data.description && (
+        <div style={{ fontSize: 12, fontWeight: 'normal', marginTop: 4 }}>
+          {data.description}
+        </div>
+      )}
       <Handle type="target" position={Position.Left} style={{ background: '#10b981' }} isConnectable={true} />
       <Handle type="source" position={Position.Right} style={{ background: '#3b82f6' }} isConnectable={true} />
     </div>

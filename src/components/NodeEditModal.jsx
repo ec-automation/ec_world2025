@@ -3,7 +3,13 @@
 import { useState } from 'react';
 
 export default function NodeEditModal({ node, onClose, onSave }) {
-  const [newLabel, setNewLabel] = useState(node.data.label || '');
+  const [label, setLabel] = useState(node.data.label || '');
+  const [backgroundColor, setBackgroundColor] = useState(node.data.backgroundColor || '#f1f5f9');
+  const [description, setDescription] = useState(node.data.description || '');
+
+  const handleSave = () => {
+    onSave(node.id, { label, backgroundColor, description });
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -11,13 +17,31 @@ export default function NodeEditModal({ node, onClose, onSave }) {
         <h2 className="text-lg font-bold mb-4 text-black dark:text-white">
           Editar nodo: {node.id}
         </h2>
+
+        <label className="block mb-2 text-sm font-medium text-black dark:text-white">Nombre</label>
         <input
           type="text"
-          value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-          className="w-full p-2 border rounded dark:bg-slate-700 dark:text-white"
-          placeholder="Nuevo nombre del nodo"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          className="w-full p-2 mb-4 border rounded dark:bg-slate-700 dark:text-white"
         />
+
+        <label className="block mb-2 text-sm font-medium text-black dark:text-white">Color de fondo</label>
+        <input
+          type="color"
+          value={backgroundColor}
+          onChange={(e) => setBackgroundColor(e.target.value)}
+          className="w-full p-2 mb-4 border rounded h-10"
+        />
+
+        <label className="block mb-2 text-sm font-medium text-black dark:text-white">Descripción</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={3}
+          className="w-full p-2 border rounded dark:bg-slate-700 dark:text-white"
+        />
+
         <div className="flex justify-end mt-4">
           <button
             onClick={onClose}
@@ -26,7 +50,7 @@ export default function NodeEditModal({ node, onClose, onSave }) {
             Cancelar
           </button>
           <button
-            onClick={() => onSave(node.id, newLabel)}
+            onClick={handleSave}
             className="px-4 py-2 bg-blue-600 text-white rounded"
           >
             Guardar

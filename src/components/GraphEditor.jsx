@@ -24,6 +24,7 @@ const VIEWPORT_KEY = 'ec-viewport';
 function GraphContent({ theme }) {
   const { sendMessage, onMessage } = useSocket();
   const [savedData, setSavedData] = useState(null);
+  const [graphId, setGraphId] = useState(null);
 
   useEffect(() => {
     try {
@@ -35,12 +36,12 @@ function GraphContent({ theme }) {
   }, []);
 
   const defaultNodes = [
-    { id: '1', position: { x: 0, y: 50 }, data: { label: 'Landing Page', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '2', position: { x:  200, y: 50 }, data: { label: 'Store', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '3', position: { x:  400, y: 50 }, data: { label: 'Product', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '4', position: { x:  600, y: 50 }, data: { label: 'Cart', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '5', position: { x:  800, y: 50 }, data: { label: 'Checkout', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
-    { id: '6', position: { x: 1000, y: 50 }, data: { label: 'Payment', backgroundColor: '#f1f5f9', borderRadius: '8px' }, type: 'customNode' },
+    { id: '1', position: { x: 0, y: 50 }, data: { label: 'Landing Page', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
+    { id: '2', position: { x:  200, y: 50 }, data: { label: 'Store', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
+    { id: '3', position: { x:  400, y: 50 }, data: { label: 'Product', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
+    { id: '4', position: { x:  600, y: 50 }, data: { label: 'Cart', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
+    { id: '5', position: { x:  800, y: 50 }, data: { label: 'Checkout', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
+    { id: '6', position: { x: 1000, y: 50 }, data: { label: 'Payment', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
   ];
 
   const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || defaultNodes);
@@ -69,7 +70,7 @@ function GraphContent({ theme }) {
     const newId = `${idCounter}`;
     const newNode = {
       id: newId,
-      data: { label: `Node ${newId}`, backgroundColor: '#f1f5f9', borderRadius: '8px' },
+      data: { label: `Node ${newId}`, backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' },
       position: { x: Math.random() * 400, y: Math.random() * 300 },
       type: 'customNode',
     };
@@ -142,10 +143,10 @@ function GraphContent({ theme }) {
     document.documentElement.classList.add(theme);
   }, [theme]);
 
-  const handleNodeEdit = (id, newLabel) => {
+  const handleNodeEdit = (id, newData) => {
     setNodes((nds) =>
       nds.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, label: newLabel } } : node
+        node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
       )
     );
     setSelectedNode(null);
