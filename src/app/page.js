@@ -4,8 +4,8 @@
 
 import { useTranslation } from "react-i18next";
 import { Suspense } from "react";
-import Ec_nav_bar from "@/components/ec_nav_bar2";
-import GraphEditor from '@/components/GraphEditor';
+import Ec_nav_bar from "../components/ec_nav_bar2";
+import GraphEditor from '../components/GraphEditor';
 
 function InnerPage() {
   const { t } = useTranslation();

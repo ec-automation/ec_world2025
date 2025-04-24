@@ -1,12 +1,14 @@
-const dotenv = require("dotenv");
+import dotenv from "dotenv";
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import stripePackage from "stripe";
+import bodyParser from "body-parser";
+import cors from "cors";
+import dispatcher from './dispatcher.js';
+
 dotenv.config({ path: '../.env.local' });
 console.log("Environment Variables Loaded:", process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET);
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const stripePackage = require("stripe");
-const bodyParser = require("body-parser");
-const cors = require("cors");
 
 const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
 
@@ -15,47 +17,27 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // ajusta esto si tienes dominio de producción
+    origin: "*", // puedes restringirlo en producción
   },
 });
 
 app.use(cors());
 
-// WebSocket connection
-io.on("connection", (socket) => {
+// WebSocket: enrutamiento dinámico
+io.on('connection', (socket) => {
   console.log("🧠 Cliente conectado vía WebSocket");
 
-  socket.on("disconnect", () => {
+  socket.onAny((event, data) => {
+    if (dispatcher[event]) {
+      dispatcher[event](socket, data);
+    } else {
+      console.warn(`⚠️ Evento WebSocket no reconocido: "${event}"`);
+    }
+  });
+
+  socket.on('disconnect', () => {
     console.log("👋 Cliente desconectado");
   });
-
-  socket.on("generate-graph", ( data ) => {
-    const { prompt, current } = data;
-    const { nodes, edges } = current || {};
-  
-    console.log("📩 Prompt recibido:", prompt);
-    console.log("📦 Nodos recibidos:", JSON.stringify(nodes, null, 2));
-    console.log("🔗 Conexiones recibidas:", JSON.stringify(edges, null, 2));
-  
-    // TODO: Aquí irá la llamada real a OpenAI
-  
-    // Por ahora respondemos con nodos ficticios para testear:
-    const response = {
-      nodes: [
-        { id: 'n1', data: { label: 'Inicio' }, position: { x: 0, y: 50 }, type: 'customNode' },
-        { id: 'n2', data: { label: 'Proceso' }, position: { x: 200, y: 50 }, type: 'customNode' },
-        { id: 'n3', data: { label: 'Fin' }, position: { x: 400, y: 50 }, type: 'customNode' },
-      ],
-      edges: [
-        { id: 'e1-2', source: 'n1', target: 'n2' },
-        { id: 'e2-3', source: 'n2', target: 'n3' },
-      ],
-    };
-  
-    socket.emit("graph-response", response);
-  });
-  
-
 });
 
 // Stripe Webhook route
@@ -93,5 +75,5 @@ app.post("/webhook", (req, res) => {
 
 // Start server
 httpServer.listen(4000, () => {
-  console.log("🚀 WebSocket + Stripe webhook en http://localhost:4000");
+  console.log("🚀 WebSocket + Stripe webhook activo en http://localhost:4000");
 });

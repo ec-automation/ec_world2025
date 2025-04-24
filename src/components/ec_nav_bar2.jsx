@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation"; // CAMBIO CLAVE
 import { useTranslation } from 'react-i18next';
 import { Moon, Sun } from 'lucide-react';
-import useDarkMode from '@/hooks/useDarkMode';
+import useDarkMode from '../hooks/useDarkMode';
 import CartIcon from "./CartIcon";
 
 export const Ec_nav_bar = () => {
