@@ -15,6 +15,8 @@ export default function Navbar() {
   const { theme, toggleTheme } = useDarkMode();
   const { i18n, t } = useTranslation();
   const router = useRouter();
+  const { sendMessage } = useSocket();
+
 
   const [previewUser, setPreviewUser] = useState(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -91,12 +93,16 @@ export default function Navbar() {
   };
 
   const changeLanguage = (lng) => {
+    console.log(`Changing language to: ${lng}`);
+    const currentLanguage = i18n.language;
+  
     i18n.changeLanguage(lng);
-    if (typeof window !== "undefined") {
-      // 📤 Guardar en base de datos
+  
+    if (lng !== currentLanguage && typeof window !== "undefined") {
       sendMessage('update-preferences', { language: lng });
     }
   };
+  
 
   const handleCreateCompany = () => {
     // Redireccionar o abrir modal
@@ -162,12 +168,16 @@ export default function Navbar() {
         <CartIcon />
         
         {/* Buy Now Button */}
-        <button
-          onClick={handleBuy}
-          className="bg-green-600 text-white hover:bg-green-700 px-3 py-1 rounded-md text-sm"
-        >
-          {t("buy_now")}
-        </button>
+        {typeof window !== "undefined" && t
+  ? <button
+      onClick={handleBuy}
+      className="bg-green-600 text-white hover:bg-green-700 px-3 py-1 rounded-md text-sm"
+    >
+      {t("buy_now")}
+    </button>
+  : null
+}
+
       </div>
 
       {/* Estado + Usuario */}

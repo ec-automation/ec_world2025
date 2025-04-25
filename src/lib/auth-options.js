@@ -60,19 +60,31 @@ export const authOptions = {
     error: "/connexion/erreur",
   },
   callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
+    async jwt({ token, account, user }) {
+      if (account && user) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
-        token.accessTokenExpires = account.expires_at * 1000;
+        token.picture = user.image;
+        token.name = user.name;
+        token.email = user.email;
+    
+        // 🧠 Agregar los nuevos campos
+        token.theme = user.theme || 'light'; // default 'light'
+        token.language = user.language || 'en'; // default 'en'
       }
-      if (Date.now() < (token.accessTokenExpires ?? 0)) return token;
-      return await refreshAccessToken(token);
+      return token;
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken;
       session.refreshToken = token.refreshToken;
       session.user.image = token.picture;
+      session.user.name = token.name;
+      session.user.email = token.email;
+    
+      // 🧠 Agregar también en session.user
+      session.user.theme = token.theme || 'light';
+      session.user.language = token.language || 'en';
+    
       return session;
     },
     async redirect({ baseUrl }) {

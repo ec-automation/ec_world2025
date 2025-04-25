@@ -1,5 +1,6 @@
 'use client';
-import React, { useCallback, useEffect, useState } from 'react';
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSocket } from '../components/WebSocketProvider';
 import ReactFlow, {
   Background,
@@ -24,8 +25,9 @@ function GraphContent({ theme }) {
   const { sendMessage, onMessage } = useSocket();
   const [savedData, setSavedData] = useState(null);
   const [graphId, setGraphId] = useState(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(savedData?.edges || []);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [idCounter, setIdCounter] = useState(7);
   const [showModal, setShowModal] = useState(false);
   const [promptText, setPromptText] = useState('');
@@ -51,18 +53,26 @@ function GraphContent({ theme }) {
     if (!raw) return;
 
     const item = JSON.parse(raw);
+    const position = { x: event.clientX - 250, y: event.clientY - 100 };
 
-    if (item.type === 'company') {
+    if (item.type === 'company' && graphId) {
       const payload = {
+        graph_id: graphId,
         name: `Empresa ${idCounter}`,
         ruc: Math.floor(Math.random() * 1e11).toString().padStart(11, '1'),
         website: 'https://ecautomation.com',
-        user_id: 1, // ← Luego conectaremos aquí el ID real del usuario logueado
+        user_id: 1, // De momento lo tienes fijo, luego lo mejoramos
       };
 
       sendMessage('create-company', payload);
+      sendMessage('create-node', {
+        graph_id: graphId,
+        type: item.type,
+        position: position,
+        label: payload.name, // o como quieras etiquetar
+      });
     }
-  }, [idCounter, sendMessage]);
+  }, [idCounter, sendMessage, graphId]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
@@ -78,39 +88,45 @@ function GraphContent({ theme }) {
     setSelectedNode(null);
   };
 
-  // Nuevo useEffect para escuchar respuestas del server
   useEffect(() => {
-    if (!onMessage) return;
+    if (sendMessage && onMessage) {
+      // 🚀 Apenas el GraphEditor carga, inicializar usuario
+      sendMessage('initialize-user', {});
 
-    const handler = (res) => {
-      if (res.success) {
-        const position = { x: Math.random() * 600, y: Math.random() * 400 };
-        const newNode = {
-          id: `${res.company_id}`,
-          position,
-          type: 'customNode',
-          data: {
-            label: `Empresa ${res.company_id}`,
-            backgroundColor: '#f1f5f9',
-            description: 'https://ecautomation.com',
-            borderRadius: '8px',
-          },
-        };
-        setNodes((nds) => [...nds, newNode]);
-      } else {
-        console.warn('Error al crear empresa:', res.error);
-      }
-    };
+      onMessage('user-initialized', (data) => {
+        if (data.graphId) {
+          console.log(`✅ Usuario inicializado con graphId: ${data.graphId}`);
+          setGraphId(data.graphId);
+          // Aquí podríamos cargar sus nodos y edges también si quieres
+        } else {
+          console.warn('⚠️ No se pudo inicializar el usuario:', data.error);
+        }
+      });
 
-    onMessage('company-created', handler);
-
-  }, [onMessage, setNodes]);
+      onMessage('graph-data', (res) => {
+        if (res.nodes) {
+          const loadedNodes = res.nodes.map((node) => ({
+            id: node.id.toString(),
+            position: { x: node.x, y: node.y },
+            type: 'customNode',
+            data: {
+              label: node.label,
+              backgroundColor: '#f1f5f9',
+              borderRadius: '8px',
+              description: '',
+            },
+          }));
+          setNodes(loadedNodes);
+        }
+      });
+    }
+  }, [sendMessage, onMessage]);
 
   return (
     <div className="flex h-full w-full">
       <GraphSidebarPalette />
       <div className="flex-1 h-full relative">
-        {/* Modales y ediciones */}
+
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-black p-4 rounded shadow-lg w-96">
@@ -133,6 +149,7 @@ function GraphContent({ theme }) {
             </div>
           </div>
         )}
+
         {selectedNode && (
           <NodeEditModal
             node={selectedNode}
@@ -140,6 +157,7 @@ function GraphContent({ theme }) {
             onSave={handleNodeEdit}
           />
         )}
+
         <ReactFlow
           nodes={nodes}
           edges={edges}

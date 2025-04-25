@@ -20,7 +20,7 @@ function InnerPage() {
 
 
 
-     <GraphEditor />
+{/*      <GraphEditor /> */}
 
 {/*      <div className="bg-white dark:bg-black text-black dark:text-white p-4 rounded">
         Prueba de modo oscuro 🌙

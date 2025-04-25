@@ -40,6 +40,7 @@ io.on('connection', async (socket) => {
 
   // 🔥 Correcto: login dentro de conexión
   socket.on('login', async (user) => {
+    console.log(`✅ login received with: ${user.email}, ID: ${socket.user_id}`);
     try {
       const conn = await getConnection();
       const [rows] = await conn.execute(

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSocket } from '../components/WebSocketProvider'; // <-- Importante
+import { useSocket } from '../components/WebSocketProvider';
 
 export default function useDarkMode() {
   const [theme, setTheme] = useState('light');
@@ -13,16 +13,18 @@ export default function useDarkMode() {
       localStorage.theme = newTheme;
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
 
-      // 📤 Guardar en base de datos
-      sendMessage('update-preferences', { theme: newTheme });
+      // ✅ Solo enviamos si realmente cambió
+      if (newTheme !== localStorage.theme) {
+        sendMessage('update-preferences', { theme: newTheme });
+      }
     }
   };
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const localTheme = localStorage.theme || 'light';
-      setTheme(localTheme);
-      document.documentElement.classList.toggle('dark', localTheme === 'dark');
+      const savedTheme = localStorage.theme || 'light';
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
     }
   }, []);
 
