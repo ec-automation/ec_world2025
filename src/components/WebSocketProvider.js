@@ -1,62 +1,53 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
 const WebSocketContext = createContext(null);
 
 export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-
-  // ✅ Función para enviar mensajes
-  const sendMessage = (event, data) => {
-    if (socket) {
-      socket.emit(event, data);
-      console.log(`📤 Mensaje enviado: ${event}`, data);
-    } else {
-      console.warn("❌ Socket no conectado, no se pudo enviar:", event);
-    }
-  };
-
-  // ✅ Función para escuchar mensajes
-  const onMessage = (eventName, callback) => {
-    if (socket) {
-      socket.on(eventName, callback);
-    } else {
-      console.warn("❌ Socket no conectado, no se pudo registrar listener:", eventName);
-    }
-  };
+  const [status, setStatus] = useState('disconnected');
 
   useEffect(() => {
-    const socketIo = io("ws://ecautomation2.ddns.net:4000");
-
-    socketIo.on('connect', () => {
-      console.log("✅ Socket conectado");
-    });
-
-    socketIo.on('disconnect', () => {
-      console.log("⛔ Socket desconectado");
+    const socketIo = io('ws://ecautomation2.ddns.net:4000', {
+      transports: ['websocket'],
     });
 
     setSocket(socketIo);
+
+    socketIo.on('connect', () => {
+      console.log('✅ Socket conectado');
+      setStatus('connected');
+    });
+
+    socketIo.on('disconnect', () => {
+      console.log('⛔ Socket desconectado');
+      setStatus('disconnected');
+    });
 
     return () => {
       socketIo.disconnect();
     };
   }, []);
 
-  const value = useMemo(() => ({
-    socket,
-    sendMessage,
-    onMessage
-  }), [socket]);
+  const sendMessage = (event, payload) => {
+    if (socket && socket.connected) {
+      socket.emit(event, payload);
+    }
+  };
+
+  const onMessage = (event, callback) => {
+    if (socket) {
+      socket.on(event, callback);
+    }
+  };
 
   return (
-    <WebSocketContext.Provider value={value}>
+    <WebSocketContext.Provider value={{ socket, sendMessage, onMessage, status }}>
       {children}
     </WebSocketContext.Provider>
   );
 };
 
-// Hook para consumirlo fácilmente
 export const useSocket = () => useContext(WebSocketContext);
