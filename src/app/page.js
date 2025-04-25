@@ -4,7 +4,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Suspense } from "react";
-import Ec_nav_bar from "../components/ec_nav_bar2";
+import Ec_nav_bar from "../components/navbar";
 import GraphEditor from '../components/GraphEditor';
 
 function InnerPage() {
@@ -14,7 +14,6 @@ function InnerPage() {
  <main className="flex flex-col min-h-screen">
    <Ec_nav_bar />
    <div className="flex-grow flex flex-col items-center justify-center p-6">
-
 {/*       <div className="p-4 text-xl font-bold text-center bg-white text-black dark:bg-purple-900 dark:text-yellow-300">
       Test visual 🌗 Modo Claro / Oscuro
       </div> */}

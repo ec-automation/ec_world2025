@@ -5,10 +5,12 @@ const { Server } = require("socket.io");
 const stripePackage = require("stripe");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const dispatcher = require("./dispatcher");
+const dispatcher = require("./dispatcher.js");
+const { getConnection } = require("../lib/database.js");
+const { getGeoInfoFromIP } = require("./utils/getGeoInfoFromIP.js");
 
 dotenv.config({ path: "../.env.local" });
-console.log("Environment Variables Loaded:", process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET);
+console.log("🔧 Variables de entorno cargadas.");
 
 const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
 
@@ -16,16 +18,51 @@ const app = express();
 const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
-  cors: {
-    origin: "*", // Puedes restringirlo luego
-  },
+  cors: { origin: "*" },
 });
 
 app.use(cors());
 
-// WebSocket: enrutamiento dinámico
-io.on('connection', (socket) => {
-  console.log("🧠 Cliente conectado vía WebSocket");
+io.on('connection', async (socket) => {
+  const ipAddress = socket.handshake.address;
+  const geoInfo = await getGeoInfoFromIP(ipAddress);
+
+  if (geoInfo.isLocal) {
+    console.log("🧠 Cliente Local conectado");
+  } else if (geoInfo.reserved) {
+    console.log(`🧠 Cliente conectado desde IP reservada: ${ipAddress}`);
+  } else {
+    console.log(`🧠 Cliente conectado desde IP: ${ipAddress}`);
+    console.log(`    País: ${geoInfo.country}`);
+    console.log(`    Ciudad: ${geoInfo.city}`);
+    console.log(`    Región: ${geoInfo.region}`);
+  }
+
+  // 🔥 Correcto: login dentro de conexión
+  socket.on('login', async (user) => {
+    console.log("🛠 LOGIN recibido:", user);
+    try {
+      const conn = await getConnection();
+      const [rows] = await conn.execute(
+        `SELECT id FROM users WHERE username = ?`,
+        [user.email]
+      );
+      conn.end();
+
+      if (rows.length > 0) {
+        socket.user_id = rows[0].id;
+        console.log(`✅ Usuario autenticado: ${user.email}, ID: ${socket.user_id}`);
+      } else {
+        console.warn(`⚠️ Usuario no encontrado en base de datos: ${user.email}`);
+      }
+    } catch (err) {
+      console.error("❌ Error buscando usuario:", err);
+    }
+  });
+
+  socket.on('logout', (msg) => {
+    console.log(`👤 Usuario cerró sesión:`, msg);
+  });
 
   socket.onAny((event, data) => {
     if (dispatcher[event]) {
@@ -36,7 +73,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log("👋 Cliente desconectado");
+    console.log(geoInfo.isLocal ? "👋 Cliente Local desconectado" : `👋 Cliente desconectado IP: ${ipAddress}`);
   });
 });
 
@@ -73,7 +110,7 @@ app.post("/webhook", (req, res) => {
   res.status(200).send("OK");
 });
 
-// Start server
-httpServer.listen(4000, () => {
+// 🔥 Ahora escucha en todas las interfaces
+httpServer.listen(4000, '0.0.0.0', () => {
   console.log("🚀 WebSocket + Stripe webhook activo en http://localhost:4000");
 });

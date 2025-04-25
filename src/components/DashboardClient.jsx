@@ -1,17 +1,33 @@
 'use client';
 
-import Ec_nav_bar from "./ec_nav_bar2";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import Ec_nav_bar from "./navbar";
 import GraphEditor from "./GraphEditor";
 import { useTranslation } from "react-i18next";
+import { useSocket } from "../components/WebSocketProvider";
 
-export default function DashboardClient({ session }) {
+export default function DashboardClient() {
   const { t } = useTranslation();
+  const { socket } = useSocket();
+  const { data: session, status } = useSession();
+
+
+  // Enviar login cuando se autentica el usuario
+  useEffect(() => {
+    if (status === "authenticated" && socket && session?.user?.email) {
+      const { name, email } = session.user;
+      console.log("📤 Enviando login vía socket:", { name, email });
+      socket.emit("login", { name, email });
+    }
+  }, [status, socket, session]);
+
+
 
   return (
     <main className="flex flex-col min-h-screen">
       <Ec_nav_bar />
-      <h1 className="text-white">Hola! {session.user?.name}</h1>
-
+      
       <div className="flex-grow flex flex-col items-center justify-center p-6">
         <GraphEditor />
       </div>
