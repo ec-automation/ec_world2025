@@ -92,6 +92,10 @@ export default function Navbar() {
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
+    if (typeof window !== "undefined") {
+      // 📤 Guardar en base de datos
+      sendMessage('update-preferences', { language: lng });
+    }
   };
 
   const handleCreateCompany = () => {

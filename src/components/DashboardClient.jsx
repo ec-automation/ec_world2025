@@ -2,32 +2,60 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 import Ec_nav_bar from "./navbar";
 import GraphEditor from "./GraphEditor";
-import { useTranslation } from "react-i18next";
 import { useSocket } from "../components/WebSocketProvider";
+import useDarkMode from "../hooks/useDarkMode";
+import GeoStatus from "./GeoStatus";
 
 export default function DashboardClient() {
-  const { t } = useTranslation();
   const { socket } = useSocket();
   const { data: session, status } = useSession();
+  const { t, i18n } = useTranslation();
+  const { setTheme } = useDarkMode();
+  const [geoInfo, setGeoInfo] = useState(null);
 
-
-  // Enviar login cuando se autentica el usuario
   useEffect(() => {
     if (status === "authenticated" && socket && session?.user?.email) {
       const { name, email } = session.user;
-      console.log("📤 Enviando login vía socket:", { name, email });
+      console.log("📤 Emitiendo login vía socket:", { name, email });
       socket.emit("login", { name, email });
     }
   }, [status, socket, session]);
 
+  useEffect(() => {
+    if (socket) {
+      socket.on("user-preferences", (prefs) => {
+        console.log("🌟 Preferencias recibidas:", prefs);
+        if (prefs.theme) setTheme(prefs.theme);
+        if (prefs.language) i18n.changeLanguage(prefs.language);
+      });
 
+      socket.on("user-info", (info) => {
+        console.log("🌐 Info de conexión recibida:", info);
+        setGeoInfo(info);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off("user-preferences");
+        socket.off("user-info");
+      }
+    };
+  }, [socket]);
 
   return (
     <main className="flex flex-col min-h-screen">
       <Ec_nav_bar />
-      
+
+      {typeof window !== 'undefined' && geoInfo && (
+        <div className="p-2 flex justify-center">
+          <GeoStatus info={geoInfo} />
+        </div>
+      )}
+
       <div className="flex-grow flex flex-col items-center justify-center p-6">
         <GraphEditor />
       </div>

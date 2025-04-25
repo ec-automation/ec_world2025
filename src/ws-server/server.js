@@ -40,18 +40,23 @@ io.on('connection', async (socket) => {
 
   // 🔥 Correcto: login dentro de conexión
   socket.on('login', async (user) => {
-    console.log("🛠 LOGIN recibido:", user);
     try {
       const conn = await getConnection();
       const [rows] = await conn.execute(
-        `SELECT id FROM users WHERE username = ?`,
+        `SELECT id, theme, language FROM users WHERE username = ?`,
         [user.email]
       );
       conn.end();
-
+  
       if (rows.length > 0) {
         socket.user_id = rows[0].id;
         console.log(`✅ Usuario autenticado: ${user.email}, ID: ${socket.user_id}`);
+  
+        // 🚀 Enviamos al frontend las preferencias
+        socket.emit('user-preferences', {
+          theme: rows[0].theme || 'light',
+          language: rows[0].language || 'en',
+        });
       } else {
         console.warn(`⚠️ Usuario no encontrado en base de datos: ${user.email}`);
       }
