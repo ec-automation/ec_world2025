@@ -1,7 +1,5 @@
-// File: GraphEditor.jsx
 'use client';
-
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSocket } from '../components/WebSocketProvider';
 import ReactFlow, {
   Background,
@@ -26,9 +24,7 @@ function GraphContent({ theme }) {
   const { sendMessage, onMessage } = useSocket();
   const [savedData, setSavedData] = useState(null);
   const [graphId, setGraphId] = useState(null);
-
-  const defaultNodes = [];
-  const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || defaultNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || []);
   const [edges, setEdges, onEdgesChange] = useEdgesState(savedData?.edges || []);
   const [idCounter, setIdCounter] = useState(7);
   const [showModal, setShowModal] = useState(false);
@@ -55,38 +51,18 @@ function GraphContent({ theme }) {
     if (!raw) return;
 
     const item = JSON.parse(raw);
-    const position = { x: event.clientX - 250, y: event.clientY - 100 }; // ajustar al layout real
 
     if (item.type === 'company') {
       const payload = {
         name: `Empresa ${idCounter}`,
         ruc: Math.floor(Math.random() * 1e11).toString().padStart(11, '1'),
         website: 'https://ecautomation.com',
-        user_id: 1,
+        user_id: 1, // ← Luego conectaremos aquí el ID real del usuario logueado
       };
 
       sendMessage('create-company', payload);
-
-      onMessage('company-created', (res) => {
-        if (res.success) {
-          const newNode = {
-            id: `${res.company_id}`,
-            position,
-            type: 'customNode',
-            data: {
-              label: payload.name,
-              backgroundColor: '#f1f5f9',
-              description: payload.website,
-              borderRadius: '8px',
-            },
-          };
-          setNodes((nds) => [...nds, newNode]);
-        } else {
-          console.warn('Error al crear empresa:', res.error);
-        }
-      });
     }
-  }, [idCounter, sendMessage, onMessage, setNodes]);
+  }, [idCounter, sendMessage]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
@@ -102,10 +78,39 @@ function GraphContent({ theme }) {
     setSelectedNode(null);
   };
 
+  // Nuevo useEffect para escuchar respuestas del server
+  useEffect(() => {
+    if (!onMessage) return;
+
+    const handler = (res) => {
+      if (res.success) {
+        const position = { x: Math.random() * 600, y: Math.random() * 400 };
+        const newNode = {
+          id: `${res.company_id}`,
+          position,
+          type: 'customNode',
+          data: {
+            label: `Empresa ${res.company_id}`,
+            backgroundColor: '#f1f5f9',
+            description: 'https://ecautomation.com',
+            borderRadius: '8px',
+          },
+        };
+        setNodes((nds) => [...nds, newNode]);
+      } else {
+        console.warn('Error al crear empresa:', res.error);
+      }
+    };
+
+    onMessage('company-created', handler);
+
+  }, [onMessage, setNodes]);
+
   return (
     <div className="flex h-full w-full">
       <GraphSidebarPalette />
       <div className="flex-1 h-full relative">
+        {/* Modales y ediciones */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-black p-4 rounded shadow-lg w-96">
@@ -128,7 +133,6 @@ function GraphContent({ theme }) {
             </div>
           </div>
         )}
-
         {selectedNode && (
           <NodeEditModal
             node={selectedNode}
@@ -136,7 +140,6 @@ function GraphContent({ theme }) {
             onSave={handleNodeEdit}
           />
         )}
-
         <ReactFlow
           nodes={nodes}
           edges={edges}
