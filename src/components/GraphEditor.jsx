@@ -27,28 +27,7 @@ function GraphContent({ theme }) {
   const [savedData, setSavedData] = useState(null);
   const [graphId, setGraphId] = useState(null);
 
-<<<<<<< HEAD
   const defaultNodes = [];
-=======
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      setSavedData(JSON.parse(raw));
-    } catch (err) {
-      console.error('Error loading localStorage data:', err);
-    }
-  }, []);
-
-  const defaultNodes = [
-    { id: '1', position: { x: 0, y: 50 }, data: { label: 'Landing Page', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
-    { id: '2', position: { x:  200, y: 50 }, data: { label: 'Store', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
-    { id: '3', position: { x:  400, y: 50 }, data: { label: 'Product', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
-    { id: '4', position: { x:  600, y: 50 }, data: { label: 'Cart', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
-    { id: '5', position: { x:  800, y: 50 }, data: { label: 'Checkout', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
-    { id: '6', position: { x: 1000, y: 50 }, data: { label: 'Payment', backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' }, type: 'customNode' },
-  ];
-
->>>>>>> 6db5e99 (.)
   const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || defaultNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(savedData?.edges || []);
   const [idCounter, setIdCounter] = useState(7);
@@ -70,24 +49,10 @@ function GraphContent({ theme }) {
     setEdges((eds) => eds.filter((e) => e.id !== edge.id));
   }, [setEdges]);
 
-<<<<<<< HEAD
   const handleDrop = useCallback((event) => {
     event.preventDefault();
     const raw = event.dataTransfer.getData('application/ec-node');
     if (!raw) return;
-=======
-  const handleAddNode = () => {
-    const newId = `${idCounter}`;
-    const newNode = {
-      id: newId,
-      data: { label: `Node ${newId}`, backgroundColor: '#f1f5f9', borderRadius: '8px', description: '' },
-      position: { x: Math.random() * 400, y: Math.random() * 300 },
-      type: 'customNode',
-    };
-    setNodes((nds) => [...nds, newNode]);
-    setIdCounter((prev) => prev + 1);
-  };
->>>>>>> 6db5e99 (.)
 
     const item = JSON.parse(raw);
     const position = { x: event.clientX - 250, y: event.clientY - 100 }; // ajustar al layout real
@@ -128,54 +93,6 @@ function GraphContent({ theme }) {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-<<<<<<< HEAD
-=======
-    console.log('[PROMPT SUBMIT]', {
-      prompt: promptText,
-      nodes: currentNodes,
-      edges: currentEdges,
-    });
-
-    sendMessage('generate-graph', {
-      prompt: promptText,
-      current: {
-        nodes: currentNodes,
-        edges: currentEdges,
-      },
-    });
-    setShowModal(false);
-    setPromptText('');
-  };
-
-  useEffect(() => {
-    const handler = (data) => {
-      console.log('📥 Respuesta de IA:', data);
-      if (Array.isArray(data.nodes) && Array.isArray(data.edges)) {
-        setNodes(data.nodes);
-        setEdges(data.edges);
-      } else {
-        console.warn('❌ Formato de datos inválido:', data);
-      }
-    };
-
-    onMessage('graph-response', handler);
-    return () => {
-      const socket = document.querySelector('[data-socket]');
-      socket?.off?.('graph-response', handler);
-    };
-  }, [onMessage, setNodes, setEdges]);
-
-  useEffect(() => {
-    const data = JSON.stringify({ nodes, edges });
-    localStorage.setItem(STORAGE_KEY, data);
-  }, [nodes, edges]);
-
-  useEffect(() => {
-    document.documentElement.classList.remove('dark', 'light');
-    document.documentElement.classList.add(theme);
-  }, [theme]);
-
->>>>>>> 6db5e99 (.)
   const handleNodeEdit = (id, newData) => {
     setNodes((nds) =>
       nds.map((node) =>

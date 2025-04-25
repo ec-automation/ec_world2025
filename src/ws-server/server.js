@@ -1,13 +1,13 @@
-import dotenv from "dotenv";
-import express from "express";
-import http from "http";
-import { Server } from "socket.io";
-import stripePackage from "stripe";
-import bodyParser from "body-parser";
-import cors from "cors";
-import dispatcher from './dispatcher.js';
+const dotenv = require("dotenv");
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const stripePackage = require("stripe");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const dispatcher = require("./dispatcher");
 
-dotenv.config({ path: '../.env.local' });
+dotenv.config({ path: "../.env.local" });
 console.log("Environment Variables Loaded:", process.env.STRIPE_SECRET_KEY, process.env.STRIPE_WEBHOOK_SECRET);
 
 const stripe = stripePackage(process.env.STRIPE_SECRET_KEY);
@@ -17,7 +17,7 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // puedes restringirlo en producción
+    origin: "*", // Puedes restringirlo luego
   },
 });
 

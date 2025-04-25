@@ -1,8 +1,8 @@
-// dispatcher.js
-import * as company from './handlers/company.js';
+// Usar require en vez de import
+const company = require("./handlers/company");
 
 const dispatcher = {
   'create-company': company.create,
 };
 
-export default dispatcher;
+module.exports = dispatcher;

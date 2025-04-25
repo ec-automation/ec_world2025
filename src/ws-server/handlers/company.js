@@ -1,11 +1,11 @@
-import { getConnection } from '../../lib/database.js';
+const { getConnection } = require("../../lib/database");
 
-export async function create(socket, data) {
+async function create(socket, data) {
   try {
     const { name, ruc, website, user_id } = data;
 
     if (!name || !ruc || !user_id) {
-      socket.emit('company-created', { success: false, error: 'Datos incompletos' });
+      socket.emit("company-created", { success: false, error: "Datos incompletos" });
       return;
     }
 
@@ -16,9 +16,13 @@ export async function create(socket, data) {
     );
     conn.end();
 
-    socket.emit('company-created', { success: true, company_id: result.insertId });
+    socket.emit("company-created", { success: true, company_id: result.insertId });
   } catch (err) {
-    console.error('❌ Error al crear empresa:', err);
-    socket.emit('company-created', { success: false, error: err.message });
+    console.error("❌ Error al crear empresa:", err);
+    socket.emit("company-created", { success: false, error: err.message });
   }
 }
+
+module.exports = {
+  create,
+};
