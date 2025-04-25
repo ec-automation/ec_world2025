@@ -1,30 +1,28 @@
-import { getConnection } from '../../lib/database.js';
+const { getConnection } = require('../../lib/database');
 
-export async function create(socket, data) {
+async function create(socket, data) {
   try {
-    const { name, ruc, website } = data;
+    const { graph_id, name, ruc, website, user_id, logo_url } = data;
 
-    if (!name || !ruc) {
+    if (!name || !ruc || !user_id) {
       socket.emit('company-created', { success: false, error: 'Datos incompletos' });
       return;
     }
 
-    if (!socket.user_id) {
-      socket.emit('company-created', { success: false, error: 'Usuario no autenticado. No se puede crear empresa.' });
-      return;
-    }
+    const logo = logo_url || `https://ecworldbucket.s3.amazonaws.com/default_company_logo.png`;
 
     const conn = await getConnection();
     const [result] = await conn.execute(
-      `INSERT INTO companies (name, ruc, website, user_id) VALUES (?, ?, ?, ?)`,
-      [name, ruc, website, socket.user_id]
+      `INSERT INTO companies (name, ruc, website, user_id, logo_url) VALUES (?, ?, ?, ?, ?)`,
+      [name, ruc, website, user_id, logo]
     );
     conn.end();
 
     socket.emit('company-created', { success: true, company_id: result.insertId });
-    console.log(`🏢 Empresa creada correctamente: ${name}, ID: ${result.insertId}`);
   } catch (err) {
     console.error('❌ Error al crear empresa:', err);
     socket.emit('company-created', { success: false, error: err.message });
   }
 }
+
+module.exports = { create };

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSocket } from '../components/WebSocketProvider';
+import { uploadLogoToS3 } from '../ws-server/utils/uploadLogoToS3';
 import ReactFlow, {
   Background,
   Controls,
@@ -22,21 +23,21 @@ const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
 function GraphContent({ theme }) {
-  const { sendMessage, onMessage } = useSocket();
+  const { sendMessage, onMessage, socket } = useSocket();
   const [savedData, setSavedData] = useState(null);
   const [graphId, setGraphId] = useState(null);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [idCounter, setIdCounter] = useState(7);
+  const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || []);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(savedData?.edges || []);
+  const [idCounter, setIdCounter] = useState(1);
+
   const [showModal, setShowModal] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
 
-  const onConnect = useCallback(
-    (connection) => setEdges((eds) => addEdge(connection, eds)),
-    [setEdges]
-  );
+  const onConnect = useCallback((connection) => {
+    setEdges((eds) => addEdge(connection, eds));
+  }, [setEdges]);
 
   const onMoveEnd = useCallback((viewport) => {
     localStorage.setItem(VIEWPORT_KEY, JSON.stringify(viewport));
@@ -47,32 +48,54 @@ function GraphContent({ theme }) {
     setEdges((eds) => eds.filter((e) => e.id !== edge.id));
   }, [setEdges]);
 
-  const handleDrop = useCallback((event) => {
+  const handleDrop = useCallback(async (event) => {
     event.preventDefault();
     const raw = event.dataTransfer.getData('application/ec-node');
-    if (!raw) return;
+    if (!raw || !sendMessage || !socket) return;
 
     const item = JSON.parse(raw);
     const position = { x: event.clientX - 250, y: event.clientY - 100 };
 
     if (item.type === 'company' && graphId) {
-      const payload = {
-        graph_id: graphId,
-        name: `Empresa ${idCounter}`,
-        ruc: Math.floor(Math.random() * 1e11).toString().padStart(11, '1'),
-        website: 'https://ecautomation.com',
-        user_id: 1, // De momento lo tienes fijo, luego lo mejoramos
+      const name = `Empresa ${idCounter}`;
+      const ruc = Math.floor(Math.random() * 1e11).toString().padStart(11, '1');
+      const website = 'https://ecautomation.com';
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.click();
+
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+
+        let logoUrl = null;
+        if (file) {
+          logoUrl = await uploadLogoToS3(file, idCounter);
+        }
+
+        const payload = {
+          graph_id: graphId,
+          name,
+          ruc,
+          website,
+          user_id: socket.user_id || 1,
+          logo_url: logoUrl,
+        };
+
+        sendMessage('create-company', payload);
+
+        sendMessage('create-node', {
+          graph_id: graphId,
+          type: item.type,
+          position,
+          label: name,
+        });
       };
 
-      sendMessage('create-company', payload);
-      sendMessage('create-node', {
-        graph_id: graphId,
-        type: item.type,
-        position: position,
-        label: payload.name, // o como quieras etiquetar
-      });
+      setIdCounter((prev) => prev + 1);
     }
-  }, [idCounter, sendMessage, graphId]);
+  }, [idCounter, sendMessage, socket, graphId]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
@@ -88,45 +111,10 @@ function GraphContent({ theme }) {
     setSelectedNode(null);
   };
 
-  useEffect(() => {
-    if (sendMessage && onMessage) {
-      // 🚀 Apenas el GraphEditor carga, inicializar usuario
-      sendMessage('initialize-user', {});
-
-      onMessage('user-initialized', (data) => {
-        if (data.graphId) {
-          console.log(`✅ Usuario inicializado con graphId: ${data.graphId}`);
-          setGraphId(data.graphId);
-          // Aquí podríamos cargar sus nodos y edges también si quieres
-        } else {
-          console.warn('⚠️ No se pudo inicializar el usuario:', data.error);
-        }
-      });
-
-      onMessage('graph-data', (res) => {
-        if (res.nodes) {
-          const loadedNodes = res.nodes.map((node) => ({
-            id: node.id.toString(),
-            position: { x: node.x, y: node.y },
-            type: 'customNode',
-            data: {
-              label: node.label,
-              backgroundColor: '#f1f5f9',
-              borderRadius: '8px',
-              description: '',
-            },
-          }));
-          setNodes(loadedNodes);
-        }
-      });
-    }
-  }, [sendMessage, onMessage]);
-
   return (
     <div className="flex h-full w-full">
       <GraphSidebarPalette />
       <div className="flex-1 h-full relative">
-
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-black p-4 rounded shadow-lg w-96">
@@ -167,7 +155,6 @@ function GraphContent({ theme }) {
           onConnect={onConnect}
           onMoveEnd={onMoveEnd}
           onEdgeClick={onEdgeClick}
-          onNodeDoubleClick={(event, node) => setSelectedNode(node)}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           fitView
