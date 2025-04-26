@@ -23,40 +23,51 @@ const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
 function GraphContent({ theme }) {
-  const { sendMessage, onMessage, socket } = useSocket();
-  const [savedData, setSavedData] = useState(null);
+  const { sendMessage, onMessage } = useSocket();
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [graphId, setGraphId] = useState(null);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(savedData?.nodes || []);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(savedData?.edges || []);
   const [idCounter, setIdCounter] = useState(1);
-
   const [showModal, setShowModal] = useState(false);
   const [promptText, setPromptText] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
 
-  const onConnect = useCallback((connection) => {
-    setEdges((eds) => addEdge(connection, eds));
-  }, [setEdges]);
+  useEffect(() => {
+    if (sendMessage && graphId === null) {
+      console.log('📥 Solicitando carga del grafo...');
+      sendMessage('load-graph', {});
+    }
 
-  const onMoveEnd = useCallback((viewport) => {
-    localStorage.setItem(VIEWPORT_KEY, JSON.stringify(viewport));
-  }, []);
-
-  const onEdgeClick = useCallback((event, edge) => {
-    event.stopPropagation();
-    setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-  }, [setEdges]);
+    onMessage('graph-loaded', (data) => {
+      console.log('📥 Grafo cargado:', data);
+      setGraphId(data.graphId);
+      setNodes(data.nodes);
+      setEdges(data.edges);
+    });
+  }, [sendMessage, onMessage, graphId]);
 
   const handleDrop = useCallback(async (event) => {
     event.preventDefault();
+    console.log('📦 Detectado evento drop');
     const raw = event.dataTransfer.getData('application/ec-node');
-    if (!raw || !sendMessage || !socket) return;
+    if (!raw) {
+      console.warn('⚠️ No se encontró data de drag');
+      return;
+    }
+
+    if (!graphId) {
+      console.warn('⚠️ No hay graphId aún disponible');
+      return;
+    }
 
     const item = JSON.parse(raw);
+    console.log('🧩 Item arrastrado:', item);
+
     const position = { x: event.clientX - 250, y: event.clientY - 100 };
 
-    if (item.type === 'company' && graphId) {
+    if (item.type === 'company') {
+      console.log('🏢 Creando nueva empresa...');
+
       const name = `Empresa ${idCounter}`;
       const ruc = Math.floor(Math.random() * 1e11).toString().padStart(11, '1');
       const website = 'https://ecautomation.com';
@@ -71,7 +82,10 @@ function GraphContent({ theme }) {
 
         let logoUrl = null;
         if (file) {
+          console.log('📸 Imagen seleccionada para subir');
           logoUrl = await uploadLogoToS3(file, idCounter);
+        } else {
+          console.log('📸 No se seleccionó imagen');
         }
 
         const payload = {
@@ -79,23 +93,29 @@ function GraphContent({ theme }) {
           name,
           ruc,
           website,
-          user_id: socket.user_id || 1,
           logo_url: logoUrl,
         };
 
+        console.log('🚀 Enviando create-company:', payload);
         sendMessage('create-company', payload);
 
+        console.log('🚀 Enviando create-node:', {
+          graph_id: graphId,
+          type: item.type,
+          position,
+          label: name,
+        });
         sendMessage('create-node', {
           graph_id: graphId,
           type: item.type,
           position,
           label: name,
         });
-      };
 
-      setIdCounter((prev) => prev + 1);
+        setIdCounter((prev) => prev + 1);
+      };
     }
-  }, [idCounter, sendMessage, socket, graphId]);
+  }, [graphId, idCounter, sendMessage]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
@@ -152,9 +172,12 @@ function GraphContent({ theme }) {
           nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onMoveEnd={onMoveEnd}
-          onEdgeClick={onEdgeClick}
+          onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
+          onMoveEnd={(viewport) => localStorage.setItem(VIEWPORT_KEY, JSON.stringify(viewport))}
+          onEdgeClick={(event, edge) => {
+            event.stopPropagation();
+            setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+          }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           fitView

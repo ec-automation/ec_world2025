@@ -37,6 +37,7 @@ export default function GraphSidebarPalette() {
   const { t } = useTranslation();
 
   const handleDragStart = (event, item) => {
+    console.log('🚚 Iniciando drag:', item);
     event.dataTransfer.setData('application/ec-node', JSON.stringify(item));
     event.dataTransfer.effectAllowed = 'move';
   };

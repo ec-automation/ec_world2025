@@ -1,31 +1,40 @@
 const { getConnection } = require('../../lib/database');
 
-async function getGraph(socket, data) {
+async function loadGraph(socket, data) {
   try {
-    const { graph_id } = data;
+    console.log('📥 Cliente solicita cargar grafo');
 
-    if (!graph_id) {
-      console.warn('⚠️ No se recibió graph_id.');
+    const conn = await getConnection();
+    const [graphs] = await conn.execute(
+      `SELECT id FROM graphs WHERE user_id = ? LIMIT 1`,
+      [socket.user_id]
+    );
+
+    if (graphs.length === 0) {
+      console.warn('⚠️ No se encontró grafo para este usuario');
+      socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
       return;
     }
 
-    const conn = await getConnection();
+    const graphId = graphs[0].id;
 
-    // Traer nodos
     const [nodes] = await conn.execute(
-      `SELECT id, type, position_x AS x, position_y AS y, label FROM nodes WHERE graph_id = ?`,
-      [graph_id]
+      `SELECT id, label, type, position_x AS x, position_y AS y FROM nodes WHERE graph_id = ?`,
+      [graphId]
     );
-
-    // Más adelante haremos lo mismo con edges
+    const [edges] = await conn.execute(
+      `SELECT id, source, target FROM edges WHERE graph_id = ?`,
+      [graphId]
+    );
 
     conn.end();
 
-    socket.emit('graph-data', { nodes }); // 🚀 Enviamos los nodos al cliente
+    console.log('✅ Grafo cargado:', { graphId, nodes, edges });
+    socket.emit('graph-loaded', { graphId, nodes, edges });
   } catch (err) {
-    console.error('❌ Error obteniendo grafo:', err);
-    socket.emit('graph-data', { error: err.message });
+    console.error('❌ Error al cargar grafo:', err);
+    socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
   }
 }
 
-module.exports = { getGraph };
+module.exports = { loadGraph };

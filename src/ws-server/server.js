@@ -38,34 +38,6 @@ io.on('connection', async (socket) => {
     console.log(`    Región: ${geoInfo.region}`);
   }
 
-  // 🔥 Correcto: login dentro de conexión
-  socket.on('login', async (user) => {
-    console.log(`✅ login received with: ${user.email}, ID: ${socket.user_id}`);
-    try {
-      const conn = await getConnection();
-      const [rows] = await conn.execute(
-        `SELECT id, theme, language FROM users WHERE username = ?`,
-        [user.email]
-      );
-      conn.end();
-  
-      if (rows.length > 0) {
-        socket.user_id = rows[0].id;
-        console.log(`✅ Usuario autenticado: ${user.email}, ID: ${socket.user_id}`);
-  
-        // 🚀 Enviamos al frontend las preferencias
-        socket.emit('user-preferences', {
-          theme: rows[0].theme || 'light',
-          language: rows[0].language || 'en',
-        });
-      } else {
-        console.warn(`⚠️ Usuario no encontrado en base de datos: ${user.email}`);
-      }
-    } catch (err) {
-      console.error("❌ Error buscando usuario:", err);
-    }
-  });
-
   socket.on('logout', (msg) => {
     console.log(`👤 Usuario cerró sesión:`, msg);
   });
