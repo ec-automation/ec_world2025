@@ -33,18 +33,33 @@ function GraphContent({ theme }) {
   const [selectedNode, setSelectedNode] = useState(null);
 
   useEffect(() => {
-    if (sendMessage && graphId === null) {
-      console.log('📥 Solicitando carga del grafo...');
-      sendMessage('load-graph', {});
-    }
+    if (!sendMessage || !onMessage) return;
 
-    onMessage('graph-loaded', (data) => {
+    console.log('📥 Solicitando carga del grafo...');
+    sendMessage('load-graph', {});
+
+    const unsubGraphLoaded = onMessage('graph-loaded', (data) => {
       console.log('📥 Grafo cargado:', data);
-      setGraphId(data.graphId);
-      setNodes(data.nodes);
-      setEdges(data.edges);
+      if (data.graphId === null) {
+        console.log('🆕 Creando primer grafo para el usuario...');
+        sendMessage('create-graph', {});
+      } else {
+        setGraphId(data.graphId);
+        setNodes(data.nodes);
+        setEdges(data.edges);
+      }
     });
-  }, [sendMessage, onMessage, graphId]);
+
+    const unsubGraphCreated = onMessage('graph-created', (data) => {
+      console.log('🆕 Grafo creado:', data);
+      setGraphId(data.graphId);
+    });
+
+    return () => {
+      if (typeof unsubGraphLoaded === 'function') unsubGraphLoaded();
+      if (typeof unsubGraphCreated === 'function') unsubGraphCreated();
+    };
+  }, [sendMessage, onMessage]);
 
   const handleDrop = useCallback(async (event) => {
     event.preventDefault();

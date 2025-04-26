@@ -10,13 +10,22 @@ async function loadGraph(socket, data) {
       [socket.user_id]
     );
 
-    if (graphs.length === 0) {
-      console.warn('⚠️ No se encontró grafo para este usuario');
-      socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
-      return;
-    }
+    let graphId = null;
 
-    const graphId = graphs[0].id;
+    if (graphs.length === 0) {
+      console.log('🆕 No se encontró grafo, creando uno nuevo...');
+      const [result] = await conn.execute(
+        `INSERT INTO graphs (user_id, created_at) VALUES (?, NOW())`,
+        [socket.user_id]
+      );
+      graphId = result.insertId;
+
+      console.log('✅ Grafo creado con ID:', graphId);
+
+      socket.emit('graph-created', { graphId });
+    } else {
+      graphId = graphs[0].id;
+    }
 
     const [nodes] = await conn.execute(
       `SELECT id, label, type, position_x AS x, position_y AS y FROM nodes WHERE graph_id = ?`,
