@@ -2,7 +2,7 @@
 
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { useSocket } from "./WebSocketProvider"; // Asegúrate de que la ruta es correcta
+import { useSocket } from "./WebSocketProvider";
 import { Moon, Sun } from "lucide-react";
 import CartIcon from "./CartIcon";
 import useDarkMode from "../hooks/useDarkMode";
@@ -29,7 +29,6 @@ function Ec_nav_bar() {
 
   const changeLanguage = (lng) => {
     i18n.changeLanguage(lng);
-
     if (socket) {
       socket.emit('update-preferences', { language: lng });
     }
@@ -43,10 +42,12 @@ function Ec_nav_bar() {
 
   return (
     <nav className="w-full h-20 bg-black bg-opacity-70 flex items-center justify-between px-4">
-      <div className="flex items-center">
+      {/* Logo */}
+      <div className="flex items-center gap-2">
         <img src={logoUrl} alt="Logo" className="h-12 w-auto" />
       </div>
 
+      {/* Opciones */}
       <div className="flex items-center gap-4">
         <select
           className="bg-black text-white border rounded p-1 text-sm"
@@ -70,16 +71,25 @@ function Ec_nav_bar() {
 
         {session ? (
           <>
+            {/* Foto y nombre */}
+            <div className="flex items-center gap-2 text-white">
+              {session.user?.image && (
+                <img src={session.user.image} alt="Profile" className="w-8 h-8 rounded-full" />
+              )}
+              <span className="hidden md:inline text-sm">{session.user?.name}</span>
+            </div>
+
+            {/* Botones de usuario logueado */}
             <button onClick={handleBuy} className="bg-green-600 text-white hover:bg-green-700 px-3 py-1 rounded-md text-sm">
               {t("buy_now")}
             </button>
             <CartIcon />
-            <button onClick={() => signOut()} className="bg-red-600 text-white hover:bg-red-700 px-3 py-1 rounded-md text-sm">
+            <button onClick={() => signOut({ callbackUrl: '/' })} className="bg-red-600 text-white hover:bg-red-700 px-3 py-1 rounded-md text-sm">
               {t("Sign Out")}
             </button>
           </>
         ) : (
-          <button onClick={() => signIn()} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded-md text-sm">
+          <button onClick={() => signIn(undefined, { callbackUrl: '/' })} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded-md text-sm">
             {t("Sign In")}
           </button>
         )}
