@@ -37,10 +37,32 @@ export default function GraphSidebarPalette() {
   const { t } = useTranslation();
 
   const handleDragStart = (event, item) => {
-    console.log('🚚 Iniciando drag:', item);
     event.dataTransfer.setData('application/ec-node', JSON.stringify(item));
     event.dataTransfer.effectAllowed = 'move';
+  
+    // Crear una imagen de drag visual
+    const dragIcon = document.createElement('div');
+    dragIcon.style.width = '50px';
+    dragIcon.style.height = '50px';
+    dragIcon.style.background = 'white';
+    dragIcon.style.border = '1px solid black';
+    dragIcon.style.borderRadius = '10px';
+    dragIcon.style.display = 'flex';
+    dragIcon.style.alignItems = 'center';
+    dragIcon.style.justifyContent = 'center';
+    dragIcon.style.fontSize = '24px';
+    dragIcon.style.fontWeight = 'bold';
+    dragIcon.innerText = item.icon;
+  
+    document.body.appendChild(dragIcon);
+    event.dataTransfer.setDragImage(dragIcon, 25, 25);
+  
+    // Borrar la imagen auxiliar después de un pequeño tiempo
+    setTimeout(() => document.body.removeChild(dragIcon), 0);
+  
+    console.log('🚚 Iniciando drag:', item);
   };
+  
 
   return (
     <div className="w-48 h-full p-3 bg-gray-100 dark:bg-slate-800 border-r border-slate-300 dark:border-slate-700 overflow-y-auto">

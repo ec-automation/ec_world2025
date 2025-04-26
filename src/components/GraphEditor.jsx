@@ -59,78 +59,29 @@ function GraphContent({ theme }) {
       if (typeof unsubGraphLoaded === 'function') unsubGraphLoaded();
       if (typeof unsubGraphCreated === 'function') unsubGraphCreated();
     };
-  }, [sendMessage, onMessage]);
+  }, [sendMessage, onMessage]);  // ✅ Correctamente declarado
 
   const handleDrop = useCallback(async (event) => {
     event.preventDefault();
     console.log('📦 Detectado evento drop');
+  
     const raw = event.dataTransfer.getData('application/ec-node');
     if (!raw) {
       console.warn('⚠️ No se encontró data de drag');
       return;
     }
-
+  
     if (!graphId) {
       console.warn('⚠️ No hay graphId aún disponible');
       return;
     }
-
+  
     const item = JSON.parse(raw);
     console.log('🧩 Item arrastrado:', item);
-
-    const position = { x: event.clientX - 250, y: event.clientY - 100 };
-
-    if (item.type === 'company') {
-      console.log('🏢 Creando nueva empresa...');
-
-      const name = `Empresa ${idCounter}`;
-      const ruc = Math.floor(Math.random() * 1e11).toString().padStart(11, '1');
-      const website = 'https://ecautomation.com';
-
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.click();
-
-      fileInput.onchange = async (e) => {
-        const file = e.target.files[0];
-
-        let logoUrl = null;
-        if (file) {
-          console.log('📸 Imagen seleccionada para subir');
-          logoUrl = await uploadLogoToS3(file, idCounter);
-        } else {
-          console.log('📸 No se seleccionó imagen');
-        }
-
-        const payload = {
-          graph_id: graphId,
-          name,
-          ruc,
-          website,
-          logo_url: logoUrl,
-        };
-
-        console.log('🚀 Enviando create-company:', payload);
-        sendMessage('create-company', payload);
-
-        console.log('🚀 Enviando create-node:', {
-          graph_id: graphId,
-          type: item.type,
-          position,
-          label: name,
-        });
-        sendMessage('create-node', {
-          graph_id: graphId,
-          type: item.type,
-          position,
-          label: name,
-        });
-
-        setIdCounter((prev) => prev + 1);
-      };
-    }
+    
+    // ...
   }, [graphId, idCounter, sendMessage]);
+  
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
