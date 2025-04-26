@@ -18,7 +18,9 @@ import CustomNodeComponent from './CustomNodeComponent';
 import GraphSidebarPalette from './GraphSidebarPalette';
 import NodeEditModal from './NodeEditModal';
 
+// ✅ Importante: nodeTypes ahora está FUERA
 const nodeTypes = { customNode: CustomNodeComponent };
+
 const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
@@ -45,7 +47,10 @@ function GraphContent({ theme }) {
         sendMessage('create-graph', {});
       } else {
         setGraphId(data.graphId);
-        setNodes(data.nodes);
+        setNodes(data.nodes.map(node => ({
+          ...node,
+          position: node.position || { x: Math.random() * 400, y: Math.random() * 400 }
+        })));
         setEdges(data.edges);
       }
     });
@@ -59,29 +64,78 @@ function GraphContent({ theme }) {
       if (typeof unsubGraphLoaded === 'function') unsubGraphLoaded();
       if (typeof unsubGraphCreated === 'function') unsubGraphCreated();
     };
-  }, [sendMessage, onMessage]);  // ✅ Correctamente declarado
+  }, [sendMessage, onMessage]);
 
   const handleDrop = useCallback(async (event) => {
     event.preventDefault();
     console.log('📦 Detectado evento drop');
-  
     const raw = event.dataTransfer.getData('application/ec-node');
     if (!raw) {
       console.warn('⚠️ No se encontró data de drag');
       return;
     }
-  
+
     if (!graphId) {
       console.warn('⚠️ No hay graphId aún disponible');
       return;
     }
-  
+
     const item = JSON.parse(raw);
     console.log('🧩 Item arrastrado:', item);
-    
-    // ...
+
+    const position = { x: event.clientX - 250, y: event.clientY - 100 };
+
+    if (item.type === 'company') {
+      console.log('🏢 Creando nueva empresa...');
+
+      const name = `Empresa ${idCounter}`;
+      const ruc = Math.floor(Math.random() * 1e11).toString().padStart(11, '1');
+      const website = 'https://ecautomation.com';
+
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.click();
+
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+
+        let logoUrl = null;
+        if (file) {
+          console.log('📸 Imagen seleccionada para subir');
+          logoUrl = await uploadLogoToS3(file, idCounter);
+        } else {
+          console.log('📸 No se seleccionó imagen');
+        }
+
+        const payload = {
+          graph_id: graphId,
+          name,
+          ruc,
+          website,
+          logo_url: logoUrl,
+        };
+
+        console.log('🚀 Enviando create-company:', payload);
+        sendMessage('create-company', payload);
+
+        console.log('🚀 Enviando create-node:', {
+          graph_id: graphId,
+          type: item.type,
+          position,
+          label: name,
+        });
+        sendMessage('create-node', {
+          graph_id: graphId,
+          type: item.type,
+          position,
+          label: name,
+        });
+
+        setIdCounter((prev) => prev + 1);
+      };
+    }
   }, [graphId, idCounter, sendMessage]);
-  
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
@@ -150,19 +204,21 @@ function GraphContent({ theme }) {
         >
           <Controls />
           <Background />
-          <Panel position="top-right">
-            <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
-            <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
-            <button onClick={() => {
-              localStorage.removeItem(STORAGE_KEY);
-              localStorage.removeItem(VIEWPORT_KEY);
-              window.location.reload();
-            }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
-          </Panel>
-          <Panel position="bottom-right">
-            <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
-          </Panel>
         </ReactFlow>
+
+        <Panel position="top-right">
+          <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
+          <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
+          <button onClick={() => {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(VIEWPORT_KEY);
+            window.location.reload();
+          }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
+        </Panel>
+
+        <Panel position="bottom-right">
+          <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
+        </Panel>
       </div>
     </div>
   );
