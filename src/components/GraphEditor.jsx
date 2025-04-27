@@ -18,9 +18,7 @@ import CustomNodeComponent from './CustomNodeComponent';
 import GraphSidebarPalette from './GraphSidebarPalette';
 import NodeEditModal from './NodeEditModal';
 
-// ✅ Importante: nodeTypes ahora está FUERA
 const nodeTypes = { customNode: CustomNodeComponent };
-
 const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
@@ -37,8 +35,15 @@ function GraphContent({ theme }) {
   useEffect(() => {
     if (!sendMessage || !onMessage) return;
 
-    console.log('📥 Solicitando carga del grafo...');
-    sendMessage('load-graph', {});
+    let graphRequested = false;
+
+    const unsubUserPreferences = onMessage('user-preferences', () => {
+      if (!graphRequested) {
+        console.log('📥 Usuario autenticado, solicitando carga de grafo...');
+        sendMessage('load-graph', {});
+        graphRequested = true;
+      }
+    });
 
     const unsubGraphLoaded = onMessage('graph-loaded', (data) => {
       console.log('📥 Grafo cargado:', data);
@@ -61,6 +66,7 @@ function GraphContent({ theme }) {
     });
 
     return () => {
+      if (typeof unsubUserPreferences === 'function') unsubUserPreferences();
       if (typeof unsubGraphLoaded === 'function') unsubGraphLoaded();
       if (typeof unsubGraphCreated === 'function') unsubGraphCreated();
     };
@@ -204,21 +210,19 @@ function GraphContent({ theme }) {
         >
           <Controls />
           <Background />
+          <Panel position="top-right">
+            <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
+            <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
+            <button onClick={() => {
+              localStorage.removeItem(STORAGE_KEY);
+              localStorage.removeItem(VIEWPORT_KEY);
+              window.location.reload();
+            }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
+          </Panel>
+          <Panel position="bottom-right">
+            <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
+          </Panel>
         </ReactFlow>
-
-        <Panel position="top-right">
-          <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
-          <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
-          <button onClick={() => {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(VIEWPORT_KEY);
-            window.location.reload();
-          }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
-        </Panel>
-
-        <Panel position="bottom-right">
-          <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
-        </Panel>
       </div>
     </div>
   );

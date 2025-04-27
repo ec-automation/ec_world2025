@@ -4,6 +4,12 @@ async function loadGraph(socket, data) {
   try {
     console.log('📥 Cliente solicita cargar grafo');
 
+    if (!socket.user_id) {
+      console.warn('⚠️ No se puede cargar grafo: usuario no autenticado todavía.');
+      socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
+      return;
+    }
+
     const conn = await getConnection();
     const [graphs] = await conn.execute(
       `SELECT id FROM graphs WHERE user_id = ? LIMIT 1`,
@@ -21,13 +27,13 @@ async function loadGraph(socket, data) {
       graphId = result.insertId;
 
       console.log('✅ Grafo creado con ID:', graphId);
+
       socket.emit('graph-created', { graphId });
     } else {
       graphId = graphs[0].id;
     }
 
-    // Aquí ya tienes el graphId, ahora cargamos nodos y edges
-    const [nodesFromDb] = await conn.execute(
+    const [nodes] = await conn.execute(
       `SELECT id, label, type, position_x AS x, position_y AS y FROM nodes WHERE graph_id = ?`,
       [graphId]
     );
@@ -36,35 +42,12 @@ async function loadGraph(socket, data) {
       [graphId]
     );
 
-    // Cargar empresas asociadas al usuario
-    const [companies] = await conn.execute(
-      `SELECT id, name FROM companies WHERE user_id = ?`,
-      [socket.user_id]
-    );
-
-    console.log(`🏢 Empresas encontradas: ${companies.length}`);
-
-    const extraNodes = companies.map((company) => {
-      console.log(`➕ Agregando empresa al grafo: ${company.name}`);
-      return {
-        id: `company-${company.id}`,
-        type: 'customNode',
-        data: { label: company.name },
-        position: {
-          x: Math.random() * 600,
-          y: Math.random() * 400,
-        },
-      };
-    });
-
     conn.end();
 
-    const finalNodes = [...nodesFromDb, ...extraNodes];
-
-    console.log('✅ Grafo final cargado:', { graphId, nodesCount: finalNodes.length, edgesCount: edges.length });
-    socket.emit('graph-loaded', { graphId, nodes: finalNodes, edges });
+    console.log('✅ Grafo cargado:', { graphId, nodes, edges });
+    socket.emit('graph-loaded', { graphId, nodes, edges });
   } catch (err) {
-    console.error('❌ Error al cargar o crear grafo:', err);
+    console.error('❌ Error al cargar grafo:', err);
     socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
   }
 }
