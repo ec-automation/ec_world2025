@@ -42,7 +42,7 @@ export default function GraphEditor() {
   useEffect(() => {
     if (status === 'authenticated' && socket && session?.user?.email) {
       const { name, email } = session.user;
-      console.log('📤 Emitiendo login vía socket:', { name, email });
+      console.log('📤 Emitiendo login vía socket1:', { name, email });
       socket.emit('login', { name, email });
     }
   }, [status, socket, session]);

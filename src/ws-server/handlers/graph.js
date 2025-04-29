@@ -28,7 +28,7 @@ async function loadGraph(socket, data) {
       graphId = graphs[0].id;
     }
 
-    // Traer TODOS los nodos del grafo (sean empresas u otros tipos)
+    // Traer TODOS los nodos del grafo
     const [nodesFromDB] = await conn.execute(
       `SELECT id, label, type, position_x, position_y, background_color, icon FROM nodes WHERE graph_id = ?`,
       [graphId]
@@ -38,7 +38,7 @@ async function loadGraph(socket, data) {
 
     // Armar objetos React Flow
     const nodes = nodesFromDB.map(node => ({
-      id: String(node.id),  // usar siempre ID directo de MySQL como String
+      id: String(node.id),
       type: 'customNode',
       data: {
         label: node.label || 'Sin nombre',
@@ -52,7 +52,7 @@ async function loadGraph(socket, data) {
       },
     }));
 
-    // Cargar edges (conexiones)
+    // Cargar edges
     const [edgesFromDB] = await conn.execute(
       `SELECT id, source, target FROM edges WHERE graph_id = ?`,
       [graphId]

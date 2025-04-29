@@ -37,7 +37,7 @@ export default function DashboardClient() {
   useEffect(() => {
     if (status === 'authenticated' && socket && session?.user?.email) {
       const { name, email } = session.user;
-      console.log('📤 Emitiendo login vía socket:', { name, email });
+      console.log('📤 Emitiendo login vía socket:2', { name, email });
       socket.emit('login', { name, email });
     }
   }, [status, socket, session]);
@@ -69,10 +69,17 @@ export default function DashboardClient() {
           setGraphId(data.graphId);
           setNodes(data.nodes.map(node => ({
             id: String(node.id),
-            position: { x: node.x || 0, y: node.y || 0 },
+            position: { 
+              x: node.position?.x ?? 0,
+              y: node.position?.y ?? 0
+            },
             type: 'customNode',
-            data: { label: node.label || 'Sin nombre', icon: node.icon || '🔲', backgroundColor: node.backgroundColor || '#334155' },
-          })));
+            data: {
+              label: node.data?.label || 'Sin nombre',
+              icon: node.data?.icon || '🔲',
+              backgroundColor: node.data?.backgroundColor || '#334155',
+            },
+          })));          
           setEdges(data.edges);
         }
       };
