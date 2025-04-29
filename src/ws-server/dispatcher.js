@@ -4,13 +4,20 @@ const edge = require('./handlers/edge');
 const preferences = require('./handlers/preferences');
 const graph = require('./handlers/graph');
 const login = require('./handlers/login');
+
 const dispatcher = {
-  'login': login.login,  // <-- agregamos aquí
   'create-company': company.create,
   'create-node': node.create,
   'create-edge': edge.create,
   'update-preferences': preferences.updatePreferences,
-  'load-graph': graph.loadGraph,   // ✅ corregido aquí
+  'load-graph': graph.loadGraph, // <-- 🔥 CORREGIDO AQUI
+  'login': login.login,
 };
 
-module.exports = dispatcher;
+// Nuevo wrapper para loguear todos los eventos recibidos
+module.exports = new Proxy(dispatcher, {
+  get(target, prop) {
+    console.log(`📩 Evento recibido en dispatcher: "${prop}"`);
+    return target[prop];
+  }
+});

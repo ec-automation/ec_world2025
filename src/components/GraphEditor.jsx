@@ -18,9 +18,7 @@ import CustomNodeComponent from './CustomNodeComponent';
 import GraphSidebarPalette from './GraphSidebarPalette';
 import NodeEditModal from './NodeEditModal';
 
-// ✅ Importante: nodeTypes ahora está FUERA
 const nodeTypes = { customNode: CustomNodeComponent };
-
 const STORAGE_KEY = 'ec-flow-data';
 const VIEWPORT_KEY = 'ec-viewport';
 
@@ -31,7 +29,6 @@ function GraphContent({ theme }) {
   const [graphId, setGraphId] = useState(null);
   const [idCounter, setIdCounter] = useState(1);
   const [showModal, setShowModal] = useState(false);
-  const [promptText, setPromptText] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
 
   useEffect(() => {
@@ -47,11 +44,20 @@ function GraphContent({ theme }) {
         sendMessage('create-graph', {});
       } else {
         setGraphId(data.graphId);
-        setNodes(data.nodes.map(node => ({
-          ...node,
-          position: node.position || { x: Math.random() * 400, y: Math.random() * 400 }
-        })));
-        setEdges(data.edges);
+        const formattedNodes = data.nodes.map((node) => ({
+          id: node.id.toString(),
+          type: 'customNode',
+          position: node.position || { x: Math.random() * 300, y: Math.random() * 300 },
+          data: {
+            label: node.label,
+            ruc: node.ruc,
+            website: node.website,
+            backgroundColor: node.background_color,
+            icon: node.icon,
+          },
+        }));
+        setNodes(formattedNodes);
+        setEdges(data.edges || []);
       }
     });
 
@@ -69,6 +75,7 @@ function GraphContent({ theme }) {
   const handleDrop = useCallback(async (event) => {
     event.preventDefault();
     console.log('📦 Detectado evento drop');
+
     const raw = event.dataTransfer.getData('application/ec-node');
     if (!raw) {
       console.warn('⚠️ No se encontró data de drag');
@@ -84,56 +91,28 @@ function GraphContent({ theme }) {
     console.log('🧩 Item arrastrado:', item);
 
     const position = { x: event.clientX - 250, y: event.clientY - 100 };
+    const newNode = {
+      id: `${Date.now()}`,
+      type: 'customNode',
+      position,
+      data: {
+        label: item.label,
+        backgroundColor: '',
+        icon: item.icon,
+      },
+    };
+
+    setNodes((nds) => nds.concat(newNode));
 
     if (item.type === 'company') {
-      console.log('🏢 Creando nueva empresa...');
-
-      const name = `Empresa ${idCounter}`;
-      const ruc = Math.floor(Math.random() * 1e11).toString().padStart(11, '1');
-      const website = 'https://ecautomation.com';
-
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.click();
-
-      fileInput.onchange = async (e) => {
-        const file = e.target.files[0];
-
-        let logoUrl = null;
-        if (file) {
-          console.log('📸 Imagen seleccionada para subir');
-          logoUrl = await uploadLogoToS3(file, idCounter);
-        } else {
-          console.log('📸 No se seleccionó imagen');
-        }
-
-        const payload = {
-          graph_id: graphId,
-          name,
-          ruc,
-          website,
-          logo_url: logoUrl,
-        };
-
-        console.log('🚀 Enviando create-company:', payload);
-        sendMessage('create-company', payload);
-
-        console.log('🚀 Enviando create-node:', {
-          graph_id: graphId,
-          type: item.type,
-          position,
-          label: name,
-        });
-        sendMessage('create-node', {
-          graph_id: graphId,
-          type: item.type,
-          position,
-          label: name,
-        });
-
-        setIdCounter((prev) => prev + 1);
+      const payload = {
+        graph_id: graphId,
+        name: `Empresa ${idCounter}`,
+        ruc: Math.floor(Math.random() * 1e11).toString().padStart(11, '1'),
+        website: 'https://ecautomation.com',
       };
+      sendMessage('create-company', payload);
+      setIdCounter((prev) => prev + 1);
     }
   }, [graphId, idCounter, sendMessage]);
 
@@ -142,13 +121,21 @@ function GraphContent({ theme }) {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const handleNodeEdit = (id, newData) => {
+  const onNodeDoubleClick = useCallback((event, node) => {
+    console.log('🖱️ Doble clic en nodo:', node);
+    setSelectedNode(node);
+    setShowModal(true);
+  }, []);
+
+  const handleNodeEdit = (newData) => {
     setNodes((nds) =>
       nds.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
+        node.id === selectedNode.id
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
       )
     );
-    setSelectedNode(null);
+    setShowModal(false);
   };
 
   return (
@@ -156,32 +143,9 @@ function GraphContent({ theme }) {
       <GraphSidebarPalette />
       <div className="flex-1 h-full relative">
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-black p-4 rounded shadow-lg w-96">
-              <h2 className="text-lg font-bold mb-2 text-black dark:text-white">Ingresa tu prompt</h2>
-              <textarea
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                className="w-full p-2 rounded border dark:bg-slate-700 dark:text-white"
-                rows={4}
-                placeholder="Ej. Crea un sistema de reservas con login y pagos"
-              />
-              <div className="flex justify-end mt-2">
-                <button className="bg-gray-500 text-white px-3 py-1 rounded mr-2" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </button>
-                <button className="bg-green-600 text-white px-3 py-1 rounded" onClick={() => {}}>
-                  Enviar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {selectedNode && (
           <NodeEditModal
             node={selectedNode}
-            onClose={() => setSelectedNode(null)}
+            onClose={() => setShowModal(false)}
             onSave={handleNodeEdit}
           />
         )}
@@ -200,25 +164,24 @@ function GraphContent({ theme }) {
           }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
+          onNodeDoubleClick={onNodeDoubleClick}
           fitView
         >
           <Controls />
           <Background />
+          <Panel position="top-right">
+            <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
+            <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
+            <button onClick={() => {
+              localStorage.removeItem(STORAGE_KEY);
+              localStorage.removeItem(VIEWPORT_KEY);
+              window.location.reload();
+            }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
+          </Panel>
+          <Panel position="bottom-right">
+            <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
+          </Panel>
         </ReactFlow>
-
-        <Panel position="top-right">
-          <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
-          <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
-          <button onClick={() => {
-            localStorage.removeItem(STORAGE_KEY);
-            localStorage.removeItem(VIEWPORT_KEY);
-            window.location.reload();
-          }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
-        </Panel>
-
-        <Panel position="bottom-right">
-          <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
-        </Panel>
       </div>
     </div>
   );

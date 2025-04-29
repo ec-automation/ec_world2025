@@ -26,25 +26,36 @@ export default function DashboardClient() {
 
   useEffect(() => {
     if (socket) {
-      socket.on("user-preferences", (prefs) => {
+      const handleUserPreferences = (prefs) => {
         console.log("🌟 Preferencias recibidas:", prefs);
         if (prefs.theme) setTheme(prefs.theme);
         if (prefs.language) i18n.changeLanguage(prefs.language);
-      });
+      };
 
-      socket.on("user-info", (info) => {
+      const handleUserInfo = (info) => {
         console.log("🌐 Info de conexión recibida:", info);
         setGeoInfo(info);
-      });
-    }
+      };
 
-    return () => {
-      if (socket) {
-        socket.off("user-preferences");
-        socket.off("user-info");
-      }
-    };
-  }, [socket]);
+      const handleLoginSuccess = (data) => {
+        console.log("✅ Login confirmado en frontend:", data);
+        if (socket) {
+          console.log("📥 Usuario autenticado, solicitando carga de grafo...");
+          socket.emit('load-graph', {});
+        }
+      };
+
+      socket.on("user-preferences", handleUserPreferences);
+      socket.on("user-info", handleUserInfo);
+      socket.on("login-success", handleLoginSuccess);
+
+      return () => {
+        socket.off("user-preferences", handleUserPreferences);
+        socket.off("user-info", handleUserInfo);
+        socket.off("login-success", handleLoginSuccess);
+      };
+    }
+  }, [socket, setTheme, i18n]);
 
   return (
     <main className="flex flex-col min-h-screen">
