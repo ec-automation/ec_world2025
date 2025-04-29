@@ -4,6 +4,7 @@ const edge = require('./handlers/edge');
 const preferences = require('./handlers/preferences');
 const graph = require('./handlers/graph');
 const login = require('./handlers/login');
+const updateNodePosition = require('./handlers/update-node-position');
 
 const dispatcher = {
   'create-company': company.create,
@@ -12,6 +13,7 @@ const dispatcher = {
   'update-preferences': preferences.updatePreferences,
   'load-graph': graph.loadGraph, // <-- 🔥 CORREGIDO AQUI
   'login': login.login,
+  'update-node-position': updateNodePosition.updateNodePosition,
 };
 
 // Nuevo wrapper para loguear todos los eventos recibidos

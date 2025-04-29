@@ -2,10 +2,11 @@ const { getConnection } = require('../../lib/database');
 
 async function loadGraph(socket, data) {
   try {
-    console.log('📥 Cliente solicita cargar grafo');
+    console.log('📥 Cliente solicita cargar grafo...');
 
     const conn = await getConnection();
 
+    // Buscar el grafo del usuario
     const [graphs] = await conn.execute(
       `SELECT id FROM graphs WHERE user_id = ? LIMIT 1`,
       [socket.user_id]
@@ -27,46 +28,47 @@ async function loadGraph(socket, data) {
       graphId = graphs[0].id;
     }
 
-    // 🏢 Verificar empresas existentes del usuario
-    const [companies] = await conn.execute(
-      `SELECT id, name FROM companies WHERE user_id = ?`,
-      [socket.user_id]
-    );
-
-    console.log(`🏢 Empresas encontradas: ${companies.length}`);
-
-    for (const company of companies) {
-      const [existingNodes] = await conn.execute(
-        `SELECT id FROM nodes WHERE graph_id = ? AND label = ? AND type = 'company'`,
-        [graphId, company.name]
-      );
-
-      if (existingNodes.length === 0) {
-        console.log(`➕ Agregando empresa al grafo: ${company.name}`);
-
-        await conn.execute(
-          `INSERT INTO nodes (graph_id, label, type, background_color, icon, position_x, position_y)
-           VALUES (?, ?, 'company', ?, ?, ?, ?)`,
-          [graphId, company.name, '#e0e0e0', '🏢', Math.random() * 500, Math.random() * 500]
-        );
-      }
-    }
-
-    // 📦 Ahora cargar todos los nodos actualizados
-    const [nodes] = await conn.execute(
-      `SELECT id, label, type, position_x AS x, position_y AS y, background_color, icon FROM nodes WHERE graph_id = ?`,
+    // Traer TODOS los nodos del grafo (sean empresas u otros tipos)
+    const [nodesFromDB] = await conn.execute(
+      `SELECT id, label, type, position_x, position_y, background_color, icon FROM nodes WHERE graph_id = ?`,
       [graphId]
     );
 
-    const [edges] = await conn.execute(
+    console.log('📦 Nodos obtenidos desde MySQL:', nodesFromDB);
+
+    // Armar objetos React Flow
+    const nodes = nodesFromDB.map(node => ({
+      id: String(node.id),  // usar siempre ID directo de MySQL como String
+      type: 'customNode',
+      data: {
+        label: node.label || 'Sin nombre',
+        type: node.type || 'unknown',
+        backgroundColor: node.background_color || '#334155',
+        icon: node.icon || '🔲',
+      },
+      position: {
+        x: node.position_x !== null ? node.position_x : 100,
+        y: node.position_y !== null ? node.position_y : 100,
+      },
+    }));
+
+    // Cargar edges (conexiones)
+    const [edgesFromDB] = await conn.execute(
       `SELECT id, source, target FROM edges WHERE graph_id = ?`,
       [graphId]
     );
 
+    const edges = edgesFromDB.map(edge => ({
+      id: String(edge.id),
+      source: String(edge.source),
+      target: String(edge.target),
+    }));
+
     conn.end();
 
-    console.log('✅ Grafo final cargado:', { graphId, nodesCount: nodes.length, edgesCount: edges.length });
+    console.log(`✅ Grafo final cargado: { graphId: ${graphId}, nodesCount: ${nodes.length}, edgesCount: ${edges.length} }`);
     socket.emit('graph-loaded', { graphId, nodes, edges });
+
   } catch (err) {
     console.error('❌ Error al cargar o crear grafo:', err);
     socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });

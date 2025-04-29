@@ -7,6 +7,7 @@ function CustomNodeComponent({ data }) {
   return (
     <div
       className="rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 p-2 text-center text-xs"
+      draggable={false} // ⬅️ Esto es clave
       style={{
         backgroundColor: data.backgroundColor || '#f9fafb',
         color: '#111',
@@ -16,6 +17,8 @@ function CustomNodeComponent({ data }) {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
+        userSelect: 'none', // ⬅️ También evita selección de texto accidental
+        cursor: 'grab',      // ⬅️ Para mejor experiencia visual
       }}
     >
       {data.icon && <div className="text-2xl">{data.icon}</div>}
