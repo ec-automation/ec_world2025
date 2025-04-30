@@ -145,30 +145,30 @@ export default function DashboardClient() {
     });
   }, [graphId, sendMessage]);
 
-const onNodesChange = useCallback((changes) => {
-  console.log('🌀 Cambios detectados en nodos:', changes);
-  setNodes((nds) => applyNodeChanges(changes, nds));
+  const onNodesChange = useCallback((changes) => {
+  /*   console.log('🌀 Cambios detectados en nodos:', changes); */
+    setNodes((nds) => applyNodeChanges(changes, nds));
 
-  changes.forEach(change => {
-    if (change.type === 'position' && change.dragging === false) {
-      const movedNode = nodes.find((n) => n.id === change.id);
-      if (movedNode) {
-        console.log('📍 Nodo detenido, enviando nueva posición:', movedNode);
-        sendMessage('update-node-position', {
-          nodeId: movedNode.id,
-          graphId: graphId,
-          x: movedNode.position.x,
-          y: movedNode.position.y,
-        });
+    changes.forEach(change => {
+      if (change.type === 'position' && change.dragging === false) {
+        const movedNode = nodes.find((n) => n.id === change.id);
+        if (movedNode) {
+          console.log('📍 Nodo detenido, enviando nueva posición:', movedNode);
+          sendMessage('update-node-position', {
+            nodeId: movedNode.id,
+            graphId: graphId,
+            x: movedNode.position.x,
+            y: movedNode.position.y,
+          });
+        }
+        if (change.type === 'remove') {
+          console.log('🗑 Nodo eliminado:', change);
+          sendMessage('delete-node', { node_id: change.id, graph_id: graphId });
+        }
+        
       }
-    }
-
-    if (change.type === 'remove') {
-      console.log('🗑 Nodo eliminado:', change);
-      sendMessage('delete-node', { node_id: change.id, graph_id: graphId });
-    }
-  });
-}, [nodes, graphId, sendMessage]);
+    });
+  }, [nodes, graphId, sendMessage]);
 
   return (
     <main className="flex flex-col min-h-screen">
