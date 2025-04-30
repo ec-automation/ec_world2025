@@ -1,81 +1,55 @@
-// src/ws-server/handlers/node.js
 const { getConnection } = require('../../lib/database');
 
-async function create(socket, data) {
-  try {
-    console.log('🛠️ Creando nuevo nodo en base de datos:', data);
+// Ajustes de tamaño estimado del nodo para centrarlo respecto al cursor
+const NODE_WIDTH = 180;
+const NODE_HEIGHT = 80;
 
+async function createNode(socket, data) {
+  try {
     const { graph_id, type, position, label, backgroundColor, icon } = data;
 
-    if (!graph_id || !type || !position) {
-      console.warn('⚠️ Datos incompletos para crear nodo.');
-      return;
-    }
+    // Calcular posición centrada
+    const centeredX = position.x - NODE_WIDTH / 2;
+    const centeredY = position.y - NODE_HEIGHT / 2;
 
     const conn = await getConnection();
-
     const [result] = await conn.execute(
-      `INSERT INTO nodes (graph_id, type, label, position_x, position_y, background_color, icon) 
+      `INSERT INTO nodes (graph_id, type, position_x, position_y, label, background_color, icon)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        graph_id,
-        type,
-        label || '',
-        position.x,
-        position.y,
-        backgroundColor || '#334155',
-        icon || '🔲'
-      ]
+      [graph_id, type, centeredX, centeredY, label, backgroundColor, icon]
     );
+
+    const nodeId = result.insertId;
+
+    // 🧠 Crear empresa si el nodo es tipo 'company'
+    if (type === 'company') {
+      await conn.execute(
+        `INSERT INTO companies (graph_id, node_id, name, ruc, website)
+         VALUES (?, ?, ?, ?, ?)`,
+        [graph_id, nodeId, label || `Empresa-${Date.now()}`, generateRUC(), 'https://ecautomation.com']
+      );
+      console.log('🏢 Empresa asociada creada');
+    }
 
     conn.end();
 
-    console.log('✅ Nodo creado con ID:', result.insertId);
-
-    // Opcionalmente podrías emitir aquí una confirmación si deseas
-    socket.emit('node-created', {
-      id: String(result.insertId),
+    const newNode = {
+      id: String(nodeId),
       type: 'customNode',
-      position: { x: position.x, y: position.y },
-      data: {
-        label: label || '',
-        backgroundColor: backgroundColor || '#334155',
-        icon: icon || '🔲',
-        type,
-      },
-    });
+      position: { x: centeredX, y: centeredY },
+      data: { label, backgroundColor, icon, type },
+    };
+
+    socket.emit('node-created', newNode);
+    console.log('✅ Nodo creado y emitido:', newNode);
+
   } catch (err) {
     console.error('❌ Error creando nodo:', err);
   }
 }
 
-async function updatePosition(socket, data) {
-  try {
-    console.log('📍 Actualizando posición de nodo:', data);
-
-    const { node_id, x, y } = data;
-
-    if (!node_id || x === undefined || y === undefined) {
-      console.warn('⚠️ Datos incompletos para actualizar posición.');
-      return;
-    }
-
-    const conn = await getConnection();
-
-    await conn.execute(
-      `UPDATE nodes SET position_x = ?, position_y = ? WHERE id = ?`,
-      [x, y, node_id]
-    );
-
-    conn.end();
-
-    console.log('✅ Posición actualizada exitosamente.');
-  } catch (err) {
-    console.error('❌ Error actualizando posición de nodo:', err);
-  }
+function generateRUC() {
+  return Math.floor(10000000000 + Math.random() * 89999999999).toString();
 }
 
-module.exports = {
-  create,
-  updatePosition,
-};
+module.exports = { createNode };
