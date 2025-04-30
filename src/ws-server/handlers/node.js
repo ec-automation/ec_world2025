@@ -33,7 +33,17 @@ async function create(socket, data) {
     console.log('✅ Nodo creado con ID:', result.insertId);
 
     // Opcionalmente podrías emitir aquí una confirmación si deseas
-    socket.emit('node-created', { nodeId: result.insertId });
+    socket.emit('node-created', {
+      id: String(result.insertId),
+      type: 'customNode',
+      position: { x: position.x, y: position.y },
+      data: {
+        label: label || '',
+        backgroundColor: backgroundColor || '#334155',
+        icon: icon || '🔲',
+        type,
+      },
+    });
   } catch (err) {
     console.error('❌ Error creando nodo:', err);
   }

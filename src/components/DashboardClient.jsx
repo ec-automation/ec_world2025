@@ -8,11 +8,8 @@ import { useSocket } from '../components/WebSocketProvider';
 import useDarkMode from '../hooks/useDarkMode';
 import GeoStatus from './GeoStatus';
 import GraphSidebarPalette from './GraphSidebarPalette';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  addEdge,
+import GraphCanvas from './GraphCanvas';
+import {
   useEdgesState,
   useNodesState,
   ReactFlowProvider,
@@ -39,12 +36,10 @@ export default function DashboardClient() {
   useEffect(() => {
     if (!socket || status !== 'authenticated' || !session?.user?.email) return;
     const { name, email } = session.user;
-
     const sendLogin = () => {
       console.log('📤 Emitiendo login:', { name, email });
       socket.emit('login', { name, email });
     };
-
     if (socket.connected) sendLogin();
     socket.on('connect', sendLogin);
     return () => socket.off('connect', sendLogin);
@@ -54,28 +49,32 @@ export default function DashboardClient() {
     if (!socket) return;
 
     const handleLoginSuccess = () => {
-      console.log('✅ Login confirmado');
-      setTimeout(() => {
-        console.log('📡 Solicitando carga de grafo...');
-        socket.emit('load-graph', {});
-      }, 250);
+      console.log('✅ Login confirmado en frontend');
+      if (socket) {
+        setTimeout(() => {
+          console.log('📡 Emitiendo carga de grafo tras pequeño delay...');
+          socket.emit('load-graph', {});
+        }, 250);
+      }
     };
 
     const handleGraphLoaded = (data) => {
       console.log('📥 Grafo cargado:', data);
-      if (data.graphId) {
+      if (data.graphId !== null) {
         setGraphId(data.graphId);
         setNodes(data.nodes.map(node => ({
           id: String(node.id),
-          position: {
-            x: node.position?.x ?? 0,
-            y: node.position?.y ?? 0,
-          },
+          position: node.position
+            ? node.position
+            : {
+                x: node.position_x ?? 0,
+                y: node.position_y ?? 0,
+              },
           type: 'customNode',
           data: {
-            label: node.data?.label || 'Sin nombre',
-            icon: node.data?.icon || '🔲',
-            backgroundColor: node.data?.backgroundColor || '#334155',
+            label: node.data?.label || node.label || 'Sin nombre',
+            icon: node.data?.icon || node.icon || '🔲',
+            backgroundColor: node.data?.backgroundColor || node.backgroundColor || '#334155',
           },
         })));
         setEdges(data.edges);
@@ -89,39 +88,35 @@ export default function DashboardClient() {
 
     const handleUserInfo = (info) => setGeoInfo(info);
 
+    const handleNodeCreated = (node) => {
+      console.log('🆕 Nodo creado recibido:', node);
+      const safeNode = {
+        id: String(node.id),
+        type: node.type || 'customNode',
+        position: node.position ?? { x: 0, y: 0 },
+        data: {
+          label: node.data?.label || node.label || 'Sin nombre',
+          icon: node.data?.icon || node.icon || '🔲',
+          backgroundColor: node.data?.backgroundColor || node.backgroundColor || '#334155',
+        },
+      };
+      setNodes((prev) => [...prev, safeNode]);
+    };
+
     socket.on('login-success', handleLoginSuccess);
     socket.on('graph-loaded', handleGraphLoaded);
     socket.on('user-preferences', handleUserPreferences);
     socket.on('user-info', handleUserInfo);
+    socket.on('node-created', handleNodeCreated);
 
     return () => {
       socket.off('login-success', handleLoginSuccess);
       socket.off('graph-loaded', handleGraphLoaded);
       socket.off('user-preferences', handleUserPreferences);
       socket.off('user-info', handleUserInfo);
+      socket.off('node-created', handleNodeCreated);
     };
   }, [socket, setTheme, i18n]);
-
-  const handleDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  const handleDrop = useCallback((event) => {
-    event.preventDefault();
-    const raw = event.dataTransfer.getData('application/ec-node');
-    if (!raw || !graphId) return;
-    const item = JSON.parse(raw);
-    const position = { x: event.clientX - 250, y: event.clientY - 100 };
-    sendMessage('create-node', {
-      graph_id: graphId,
-      type: item.type,
-      position,
-      label: item.label,
-      backgroundColor: '#334155',
-      icon: item.icon,
-    });
-  }, [graphId, sendMessage]);
 
   const handleNodeDoubleClick = useCallback((event, node) => {
     setSelectedNode(node);
@@ -136,7 +131,6 @@ export default function DashboardClient() {
 
   const handleUpdateNode = (updatedData) => {
     if (!selectedNode) return;
-
     const updatedNode = {
       ...selectedNode,
       data: {
@@ -144,18 +138,15 @@ export default function DashboardClient() {
         ...updatedData,
       },
     };
-
     sendMessage('update-node', {
       node_id: selectedNode.id,
       graph_id: graphId,
       label: updatedData.label,
       backgroundColor: updatedData.backgroundColor,
     });
-
     setNodes((prev) =>
       prev.map((n) => (n.id === updatedNode.id ? updatedNode : n))
     );
-
     setModalOpen(false);
   };
 
@@ -189,33 +180,29 @@ export default function DashboardClient() {
             <div className="flex h-full w-full">
               <GraphSidebarPalette />
               <div className="flex-1 h-full relative">
-                <ReactFlow
+                <GraphCanvas
                   nodes={nodes}
                   edges={edges}
                   nodeTypes={nodeTypes}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
-                  onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
                   onNodeDoubleClick={handleNodeDoubleClick}
-                  fitView
-                >
-                  <Controls />
-                  <Background />
-                  <MiniMap />
-                </ReactFlow>
+                  setEdges={setEdges}
+                  graphId={graphId}
+                  sendMessage={sendMessage}
+                />
               </div>
             </div>
           </ReactFlowProvider>
         </div>
       </div>
+
       <footer className="p-4 bg-black text-white text-center">
-        {typeof window !== 'undefined' ? (
-          <p className="mb-4 text-gray-600">{t('Copyright')}</p>
-        ) : (
-          <p className="mb-4 text-gray-600">© EC-HOME AUTOMATION PERU SAC 2025</p>
-        )}
+        <p className="mb-4 text-gray-600">
+          {typeof window !== 'undefined'
+            ? t('Copyright')
+            : '© EC-HOME AUTOMATION PERU SAC 2025'}
+        </p>
       </footer>
 
       {modalOpen && selectedNode && (
