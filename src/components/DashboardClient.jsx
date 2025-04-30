@@ -25,7 +25,7 @@ import NodeEditModal from './NodeEditModal';
 const nodeTypes = { customNode: CustomNodeComponent };
 
 export default function DashboardClient() {
-  const { socket, sendMessage, onMessage } = useSocket();
+  const { socket, sendMessage } = useSocket();
   const { data: session, status } = useSession();
   const { t, i18n } = useTranslation();
   const { setTheme } = useDarkMode();
@@ -39,13 +39,13 @@ export default function DashboardClient() {
   useEffect(() => {
     if (!socket || status !== 'authenticated' || !session?.user?.email) return;
     const { name, email } = session.user;
+
     const sendLogin = () => {
-      console.log('📤 (Re)emitiendo login tras conexión o carga inicial:', { name, email });
+      console.log('📤 Emitiendo login:', { name, email });
       socket.emit('login', { name, email });
     };
-    if (socket.connected) {
-      sendLogin();
-    }
+
+    if (socket.connected) sendLogin();
     socket.on('connect', sendLogin);
     return () => socket.off('connect', sendLogin);
   }, [socket, status, session]);
@@ -54,41 +54,53 @@ export default function DashboardClient() {
     if (!socket) return;
 
     const handleLoginSuccess = () => {
-      console.log('✅ Login confirmado en frontend');
-      if (socket) {
-        setTimeout(() => {
-          console.log('📡 Emitiendo carga de grafo tras pequeño delay...');
-          socket.emit('load-graph', {});
-        }, 250);
-      }
+      console.log('✅ Login confirmado');
+      setTimeout(() => {
+        console.log('📡 Solicitando carga de grafo...');
+        socket.emit('load-graph', {});
+      }, 250);
     };
+
     const handleGraphLoaded = (data) => {
       console.log('📥 Grafo cargado:', data);
-      if (data.graphId !== null) {
+      if (data.graphId) {
         setGraphId(data.graphId);
         setNodes(data.nodes.map(node => ({
-  id: String(node.id),
-  position: {
-    x: node.position?.x ?? 0,
-    y: node.position?.y ?? 0,
-  },
-  type: 'customNode',
-  data: {
-    label: node.data?.label || 'Sin nombre',
-    icon: node.data?.icon || '🔲',
-    backgroundColor: node.data?.backgroundColor || '#334155',
-  },
-})));
+          id: String(node.id),
+          position: {
+            x: node.position?.x ?? 0,
+            y: node.position?.y ?? 0,
+          },
+          type: 'customNode',
+          data: {
+            label: node.data?.label || 'Sin nombre',
+            icon: node.data?.icon || '🔲',
+            backgroundColor: node.data?.backgroundColor || '#334155',
+          },
+        })));
         setEdges(data.edges);
       }
     };
+
+    const handleUserPreferences = (prefs) => {
+      if (prefs.theme) setTheme(prefs.theme);
+      if (prefs.language) i18n.changeLanguage(prefs.language);
+    };
+
+    const handleUserInfo = (info) => setGeoInfo(info);
+
     socket.on('login-success', handleLoginSuccess);
     socket.on('graph-loaded', handleGraphLoaded);
+    socket.on('user-preferences', handleUserPreferences);
+    socket.on('user-info', handleUserInfo);
+
     return () => {
       socket.off('login-success', handleLoginSuccess);
       socket.off('graph-loaded', handleGraphLoaded);
+      socket.off('user-preferences', handleUserPreferences);
+      socket.off('user-info', handleUserInfo);
     };
-  }, [socket]);
+  }, [socket, setTheme, i18n]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
@@ -112,26 +124,47 @@ export default function DashboardClient() {
   }, [graphId, sendMessage]);
 
   const handleNodeDoubleClick = useCallback((event, node) => {
-    console.log('🖱 Doble clic en nodo:', node);
     setSelectedNode(node);
     setModalOpen(true);
   }, []);
 
   const handleDeleteNode = (node) => {
-    console.log('❌ Eliminando nodo desde modal:', node);
     sendMessage('delete-node', { node_id: node.id, graph_id: graphId });
     setModalOpen(false);
     setNodes((prev) => prev.filter((n) => n.id !== node.id));
   };
 
+  const handleUpdateNode = (updatedData) => {
+    if (!selectedNode) return;
+
+    const updatedNode = {
+      ...selectedNode,
+      data: {
+        ...selectedNode.data,
+        ...updatedData,
+      },
+    };
+
+    sendMessage('update-node', {
+      node_id: selectedNode.id,
+      graph_id: graphId,
+      label: updatedData.label,
+      backgroundColor: updatedData.backgroundColor,
+    });
+
+    setNodes((prev) =>
+      prev.map((n) => (n.id === updatedNode.id ? updatedNode : n))
+    );
+
+    setModalOpen(false);
+  };
+
   const onNodesChange = useCallback((changes) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
-
     changes.forEach(change => {
       if (change.type === 'position' && change.dragging === false) {
         const movedNode = nodes.find((n) => n.id === change.id);
         if (movedNode) {
-          console.log('📍 Nodo detenido, enviando nueva posición:', movedNode);
           sendMessage('update-node-position', {
             nodeId: movedNode.id,
             graphId: graphId,
@@ -141,12 +174,10 @@ export default function DashboardClient() {
         }
       }
       if (change.type === 'remove') {
-        console.log('🗑 Nodo eliminado:', change);
         sendMessage('delete-node', { node_id: change.id, graph_id: graphId });
       }
     });
   }, [nodes, graphId, sendMessage]);
-
 
   return (
     <main className="flex flex-col min-h-screen">
@@ -186,11 +217,13 @@ export default function DashboardClient() {
           <p className="mb-4 text-gray-600">© EC-HOME AUTOMATION PERU SAC 2025</p>
         )}
       </footer>
-      {modalOpen && (
+
+      {modalOpen && selectedNode && (
         <NodeEditModal
           node={selectedNode}
           onClose={() => setModalOpen(false)}
           onDelete={handleDeleteNode}
+          onUpdate={handleUpdateNode}
         />
       )}
     </main>

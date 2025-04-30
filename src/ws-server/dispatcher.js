@@ -5,8 +5,8 @@ const preferences = require('./handlers/preferences');
 const graph = require('./handlers/graph');
 const login = require('./handlers/login');
 const updateNodePosition = require('./handlers/update-node-position');
-const deleteNode = require('./handlers/node/delete-node');
-
+const deleteNode = require('./handlers/delete-node');
+const updateNode = require('./handlers/update-node');
 const dispatcher = {
   'create-company': company.create,
   'create-node': node.create,
@@ -16,12 +16,15 @@ const dispatcher = {
   'login': login.login,
   'update-node-position': updateNodePosition.updateNodePosition,
   'delete-node': deleteNode.deleteNode,
+  'update-node': updateNode.updateNode,
 };
 
 // Nuevo wrapper para loguear todos los eventos recibidos
 module.exports = new Proxy(dispatcher, {
   get(target, prop) {
-    console.log(`📩 Evento recibido en dispatcher: "${prop}"`);
-    return target[prop];
+    return function (socket, data) {
+      console.log(`📩 Evento recibido en dispatcher: "${prop}" con data:`, data);
+      return target[prop](socket, data);
+    };
   }
 });
