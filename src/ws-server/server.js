@@ -38,13 +38,27 @@ io.on('connection', async (socket) => {
     console.log(`    Región: ${geoInfo.region}`);
   }
 
+  let timeout = setTimeout(() => {
+    console.warn('⏰ Timeout: no se recibió login dentro de los 2 segundos. Socket:', socket.id);
+  }, 2000);
+
   socket.on('logout', (msg) => {
     console.log(`👤 Usuario cerró sesión:`, msg);
   });
 
   socket.onAny((event, data) => {
+    console.log(`📩 Evento recibido en dispatcher: "${event}" con data:`, data);
+
     if (dispatcher[event]) {
-      dispatcher[event](socket, data);
+      try {
+        dispatcher[event](socket, data);
+        if (event === 'login') {
+          console.log('✅ Handler de login ejecutado correctamente');
+          clearTimeout(timeout);
+        }
+      } catch (err) {
+        console.error(`❌ Error ejecutando handler para ${event}:`, err);
+      }
     } else {
       console.warn(`⚠️ Evento WebSocket no reconocido: "${event}"`);
     }
@@ -52,6 +66,7 @@ io.on('connection', async (socket) => {
 
   socket.on('disconnect', () => {
     console.log(geoInfo.isLocal ? "👋 Cliente Local desconectado" : `👋 Cliente desconectado IP: ${ipAddress}`);
+    clearTimeout(timeout);
   });
 });
 

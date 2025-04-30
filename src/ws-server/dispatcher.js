@@ -5,6 +5,7 @@ const preferences = require('./handlers/preferences');
 const graph = require('./handlers/graph');
 const login = require('./handlers/login');
 const updateNodePosition = require('./handlers/update-node-position');
+const deleteNode = require('./handlers/node/delete-node');
 
 const dispatcher = {
   'create-company': company.create,
@@ -14,6 +15,7 @@ const dispatcher = {
   'load-graph': graph.loadGraph, // <-- 🔥 CORREGIDO AQUI
   'login': login.login,
   'update-node-position': updateNodePosition.updateNodePosition,
+  'delete-node': deleteNode.deleteNode,
 };
 
 // Nuevo wrapper para loguear todos los eventos recibidos

@@ -19,6 +19,7 @@ async function login(socket, data) {
       console.log(`✅ Usuario autenticado: ${email}, ID: ${socket.user_id}`);
       
       // 🚀 Confirmar al frontend que el login fue exitoso
+      console.log('📤 Emisión login-success (backend):', socket.user_id);
       socket.emit('login-success', { userId: socket.user_id });
     } else {
       console.warn(`⚠️ Usuario no encontrado para email: ${email}`);
