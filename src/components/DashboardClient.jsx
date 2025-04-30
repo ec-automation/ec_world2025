@@ -30,41 +30,28 @@ export default function DashboardClient() {
   const { t, i18n } = useTranslation();
   const { setTheme } = useDarkMode();
   const [geoInfo, setGeoInfo] = useState(null);
-  const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
+  const [nodes, setNodes] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [graphId, setGraphId] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     if (!socket || status !== 'authenticated' || !session?.user?.email) return;
-  
     const { name, email } = session.user;
-  
     const sendLogin = () => {
-      console.log('📤 (Re)emitiendo login tras conexión:', { name, email });
+      console.log('📤 (Re)emitiendo login tras conexión o carga inicial:', { name, email });
       socket.emit('login', { name, email });
     };
-  
+    if (socket.connected) {
+      sendLogin();
+    }
     socket.on('connect', sendLogin);
-  
-    return () => {
-      socket.off('connect', sendLogin);
-    };
+    return () => socket.off('connect', sendLogin);
   }, [socket, status, session]);
-  
 
   useEffect(() => {
     if (!socket) return;
-
-    const handleUserPreferences = (prefs) => {
-      console.log('🌟 Preferencias recibidas:', prefs);
-      if (prefs.theme) setTheme(prefs.theme);
-      if (prefs.language) i18n.changeLanguage(prefs.language);
-    };
-
-    const handleUserInfo = (info) => {
-      console.log('🌐 Info de conexión recibida:', info);
-      setGeoInfo(info);
-    };
 
     const handleLoginSuccess = () => {
       console.log('✅ Login confirmado en frontend');
@@ -75,66 +62,45 @@ export default function DashboardClient() {
         }, 250);
       }
     };
-
     const handleGraphLoaded = (data) => {
       console.log('📥 Grafo cargado:', data);
       if (data.graphId !== null) {
         setGraphId(data.graphId);
         setNodes(data.nodes.map(node => ({
-          id: String(node.id),
-          position: {
-            x: node.position?.x ?? 0,
-            y: node.position?.y ?? 0,
-          },
-          type: 'customNode',
-          data: {
-            label: node.data?.label || 'Sin nombre',
-            icon: node.data?.icon || '🔲',
-            backgroundColor: node.data?.backgroundColor || '#334155',
-          },
-        })));
+  id: String(node.id),
+  position: {
+    x: node.position?.x ?? 0,
+    y: node.position?.y ?? 0,
+  },
+  type: 'customNode',
+  data: {
+    label: node.data?.label || 'Sin nombre',
+    icon: node.data?.icon || '🔲',
+    backgroundColor: node.data?.backgroundColor || '#334155',
+  },
+})));
         setEdges(data.edges);
       }
     };
-
-    socket.on('user-preferences', handleUserPreferences);
-    socket.on('user-info', handleUserInfo);
     socket.on('login-success', handleLoginSuccess);
     socket.on('graph-loaded', handleGraphLoaded);
-
     return () => {
-      socket.off('user-preferences', handleUserPreferences);
-      socket.off('user-info', handleUserInfo);
       socket.off('login-success', handleLoginSuccess);
       socket.off('graph-loaded', handleGraphLoaded);
     };
-  }, [socket, setTheme, i18n]);
+  }, [socket]);
 
   const handleDragOver = useCallback((event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const handleDrop = useCallback(async (event) => {
+  const handleDrop = useCallback((event) => {
     event.preventDefault();
-    console.log('📦 Detectado evento drop');
-
     const raw = event.dataTransfer.getData('application/ec-node');
-    if (!raw) return;
-
-    if (!graphId) {
-      console.warn('⚠️ No hay graphId disponible aún.');
-      return;
-    }
-
+    if (!raw || !graphId) return;
     const item = JSON.parse(raw);
-    console.log('🧩 Item arrastrado:', item);
-
-    const position = {
-      x: event.clientX - 250,
-      y: event.clientY - 100,
-    };
-
+    const position = { x: event.clientX - 250, y: event.clientY - 100 };
     sendMessage('create-node', {
       graph_id: graphId,
       type: item.type,
@@ -145,8 +111,20 @@ export default function DashboardClient() {
     });
   }, [graphId, sendMessage]);
 
+  const handleNodeDoubleClick = useCallback((event, node) => {
+    console.log('🖱 Doble clic en nodo:', node);
+    setSelectedNode(node);
+    setModalOpen(true);
+  }, []);
+
+  const handleDeleteNode = (node) => {
+    console.log('❌ Eliminando nodo desde modal:', node);
+    sendMessage('delete-node', { node_id: node.id, graph_id: graphId });
+    setModalOpen(false);
+    setNodes((prev) => prev.filter((n) => n.id !== node.id));
+  };
+
   const onNodesChange = useCallback((changes) => {
-  /*   console.log('🌀 Cambios detectados en nodos:', changes); */
     setNodes((nds) => applyNodeChanges(changes, nds));
 
     changes.forEach(change => {
@@ -161,25 +139,19 @@ export default function DashboardClient() {
             y: movedNode.position.y,
           });
         }
-        if (change.type === 'remove') {
-          console.log('🗑 Nodo eliminado:', change);
-          sendMessage('delete-node', { node_id: change.id, graph_id: graphId });
-        }
-        
+      }
+      if (change.type === 'remove') {
+        console.log('🗑 Nodo eliminado:', change);
+        sendMessage('delete-node', { node_id: change.id, graph_id: graphId });
       }
     });
   }, [nodes, graphId, sendMessage]);
 
+
   return (
     <main className="flex flex-col min-h-screen">
       <Ec_nav_bar />
-
-      {typeof window !== 'undefined' && geoInfo && (
-        <div className="p-2 flex justify-center">
-          <GeoStatus info={geoInfo} />
-        </div>
-      )}
-
+      {typeof window !== 'undefined' && geoInfo && <GeoStatus info={geoInfo} />}
       <div className="flex-grow flex flex-col items-center justify-center p-6">
         <div className="w-full h-[600px] bg-white dark:bg-black rounded shadow overflow-hidden">
           <ReactFlowProvider>
@@ -195,6 +167,7 @@ export default function DashboardClient() {
                   onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
+                  onNodeDoubleClick={handleNodeDoubleClick}
                   fitView
                 >
                   <Controls />
@@ -206,15 +179,20 @@ export default function DashboardClient() {
           </ReactFlowProvider>
         </div>
       </div>
-
-
-<footer className="p-4 bg-black text-white text-center">
-  {typeof window !== 'undefined' ? (
-    <p className="mb-4 text-gray-600">{t('Copyright')}</p>
-  ) : (
-    <p className="mb-4 text-gray-600">© EC-HOME AUTOMATION PERU SAC 2025</p>
-  )}
-</footer>
+      <footer className="p-4 bg-black text-white text-center">
+        {typeof window !== 'undefined' ? (
+          <p className="mb-4 text-gray-600">{t('Copyright')}</p>
+        ) : (
+          <p className="mb-4 text-gray-600">© EC-HOME AUTOMATION PERU SAC 2025</p>
+        )}
+      </footer>
+      {modalOpen && (
+        <NodeEditModal
+          node={selectedNode}
+          onClose={() => setModalOpen(false)}
+          onDelete={handleDeleteNode}
+        />
+      )}
     </main>
   );
 }
