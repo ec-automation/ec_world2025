@@ -9,6 +9,8 @@ import useDarkMode from '../hooks/useDarkMode';
 import GeoStatus from './GeoStatus';
 import GraphSidebarPalette from './GraphSidebarPalette';
 import GraphCanvas from './GraphCanvas';
+import NodeEditModalRouter from './NodeEditModalRouter';
+
 import {
   useEdgesState,
   useNodesState,
@@ -49,7 +51,7 @@ export default function DashboardClient() {
     if (!socket) return;
 
     const handleLoginSuccess = () => {
-      console.log('✅ Login confirmado en frontend');
+      console.log('✅ Login confirmado en frontend1');
       if (socket) {
         setTimeout(() => {
           console.log('📡 Emitiendo carga de grafo tras pequeño delay...');
@@ -59,27 +61,38 @@ export default function DashboardClient() {
     };
 
     const handleGraphLoaded = (data) => {
-      console.log('📥 Grafo cargado:', data);
+      console.log('📥 Grafo cargado:y', data);
       if (data.graphId !== null) {
         setGraphId(data.graphId);
-        setNodes(data.nodes.map(node => ({
+    
+        setNodes(data.nodes.map((node) => ({
           id: String(node.id),
-          position: node.position
-            ? node.position
-            : {
-                x: node.position_x ?? 0,
-                y: node.position_y ?? 0,
-              },
+          position: node.position || {
+            x: node.position_x ?? 100,
+            y: node.position_y ?? 100,
+          },
           type: 'customNode',
           data: {
-            label: node.data?.label || node.label || 'Sin nombre',
-            icon: node.data?.icon || node.icon || '🔲',
-            backgroundColor: node.data?.backgroundColor || node.backgroundColor || '#334155',
+            label: node.data.label,
+            backgroundColor: node.background_color || '#334155',
+            icon: node.icon,
+            type: node.type,
+            ruc: node.ruc,
+            website: node.website,
+            logo_url: node.logo_url,
+            email: node.email,
+            phone: node.phone,
+            sku: node.sku,
+            price: node.price,
+            lastname: node.lastname,
           },
         })));
+    
         setEdges(data.edges);
       }
     };
+    
+    
 
     const handleUserPreferences = (prefs) => {
       if (prefs.theme) setTheme(prefs.theme);
@@ -119,6 +132,7 @@ export default function DashboardClient() {
   }, [socket, setTheme, i18n]);
 
   const handleNodeDoubleClick = useCallback((event, node) => {
+    console.log('🎯 Doble clic en nodo:', node);
     setSelectedNode(node);
     setModalOpen(true);
   }, []);
@@ -143,6 +157,9 @@ export default function DashboardClient() {
       graph_id: graphId,
       label: updatedData.label,
       backgroundColor: updatedData.backgroundColor,
+      ruc: updatedData.ruc,
+      website: updatedData.website,
+      logo_url: updatedData.logo_url,
     });
     setNodes((prev) =>
       prev.map((n) => (n.id === updatedNode.id ? updatedNode : n))
@@ -206,13 +223,13 @@ export default function DashboardClient() {
       </footer>
 
       {modalOpen && selectedNode && (
-        <NodeEditModal
-          node={selectedNode}
-          onClose={() => setModalOpen(false)}
-          onDelete={handleDeleteNode}
-          onUpdate={handleUpdateNode}
-        />
-      )}
+  <NodeEditModalRouter
+    node={selectedNode}
+    onClose={() => setModalOpen(false)}
+    onDelete={handleDeleteNode}
+    onUpdate={handleUpdateNode}
+  />
+)}
     </main>
   );
 }

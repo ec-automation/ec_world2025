@@ -35,6 +35,20 @@ export default function GraphCanvas({
     });
 
     console.log('📥 Evento drop en GraphCanvas:', item);
+
+    if (item.type === 'company') {
+      const payload = {
+        graph_id: graphId,
+        name: `Empresa-${Date.now()}`,
+        ruc: Math.floor(Math.random() * 1e11).toString().padStart(11, '1'),
+        website: 'https://ecautomation.com',
+        logo_url: 'https://ecautomation.com/logo.png',
+        user_id: null, // ajusta si tienes usuario actual
+      };
+
+      sendMessage('create-company', payload);
+    }
+
     sendMessage('create-node', {
       graph_id: graphId,
       type: item.type,
@@ -43,19 +57,6 @@ export default function GraphCanvas({
       backgroundColor: '#334155',
       icon: item.icon,
     });
-    console.log('📥 mesage sent:');
-    if (item.type === 'company') {
-      const payload = {
-        graph_id: graphId,
-        name: `Empresa-${Date.now()}`,
-        ruc: Math.floor(Math.random() * 1e11).toString().padStart(11, '1'),
-        website: 'https://ecautomation.com',
-      };
-
-      sendMessage('create-company', payload);
-    }
-
-
   };
 
   const handleDragOver = (event) => {

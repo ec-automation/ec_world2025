@@ -1,72 +1,35 @@
-import React, { useState, useEffect } from 'react';
+// ✅ NodeEditModal.jsx
+import React from 'react';
+import CompanyEditor from './node-editors/CompanyEditor';
+import ClientEditor from './node-editors/ClientEditor';
 
 export default function NodeEditModal({ node, onClose, onDelete, onUpdate }) {
-  const [label, setLabel] = useState(node.data.label);
-  const [backgroundColor, setBackgroundColor] = useState(node.data.backgroundColor);
-  const [companyData, setCompanyData] = useState({ ruc: '', website: '' });
-
-  useEffect(() => {
-    if (node.data.type === 'company') {
-      // Prellenar desde el nodo si ya hay data, si no es editable lo manejaremos desde base de datos luego
-      setCompanyData({
-        ruc: node.data.ruc || '',
-        website: node.data.website || '',
-      });
+  const renderEditor = () => {
+    console.log('🧠 Editor cargando tipo lógico:', node.data?.type);
+    console.log('📦 Datos completos del nodo:', node);
+    switch (node.data.type) {
+      case 'company':
+        return <CompanyEditor node={node} onUpdate={onUpdate} />;
+      case 'client':
+        return <ClientEditor node={node} onUpdate={onUpdate} />;
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-red-500">
+              No hay editor definido para el tipo lógico "{node.data?.type ?? 'undefined'}"
+              (type visual: "{node.type}")
+            </p>
+          </div>
+        );
     }
-  }, [node]);
-
-  const handleSubmit = () => {
-    const updatePayload = {
-      label,
-      backgroundColor,
-      ...(node.data.type === 'company' && {
-        ruc: companyData.ruc,
-        website: companyData.website,
-      })
-    };
-    onUpdate(updatePayload);
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-96 shadow-lg">
-        <h2 className="text-xl font-bold mb-4">Editar Nodo</h2>
+      <div className="bg-white dark:bg-slate-800 dark:text-white p-6 rounded-xl w-96 shadow-lg">
+        <h2 className="text-xl font-bold mb-4">Editar {node.data.type}</h2>
 
-        <label className="block mb-2 text-sm font-semibold">Nombre</label>
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
-        />
-
-        <label className="block mb-2 text-sm font-semibold">Color de fondo</label>
-        <input
-          type="color"
-          value={backgroundColor}
-          onChange={(e) => setBackgroundColor(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
-        />
-
-        {node.data.type === 'company' && (
-          <>
-            <label className="block mb-2 text-sm font-semibold">RUC</label>
-            <input
-              type="text"
-              value={companyData.ruc}
-              onChange={(e) => setCompanyData({ ...companyData, ruc: e.target.value })}
-              className="w-full p-2 mb-4 border rounded"
-            />
-
-            <label className="block mb-2 text-sm font-semibold">Sitio Web</label>
-            <input
-              type="text"
-              value={companyData.website}
-              onChange={(e) => setCompanyData({ ...companyData, website: e.target.value })}
-              className="w-full p-2 mb-4 border rounded"
-            />
-          </>
-        )}
+        {renderEditor()}
 
         <div className="flex justify-between mt-6">
           <button
@@ -76,20 +39,12 @@ export default function NodeEditModal({ node, onClose, onDelete, onUpdate }) {
             Eliminar {node.data.type}
           </button>
 
-          <div className="space-x-2">
-            <button
-              className="px-4 py-2 border rounded"
-              onClick={onClose}
-            >
-              Cancelar
-            </button>
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              onClick={handleSubmit}
-            >
-              Guardar
-            </button>
-          </div>
+          <button
+            className="px-4 py-2 border rounded"
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
         </div>
       </div>
     </div>

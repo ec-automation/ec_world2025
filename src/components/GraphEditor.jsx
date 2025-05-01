@@ -60,7 +60,7 @@ export default function GraphEditor() {
       };
 
       const handleGraphLoaded = (data) => {
-        console.log('📥 Grafo cargado:', data);
+        console.log('📥 Grafo cargado: 2', data);
         if (data.graphId !== null) {
           setGraphId(data.graphId);
           setNodes(data.nodes.map((node) => ({
