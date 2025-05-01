@@ -72,7 +72,7 @@ export default function GraphEditor() {
             data: {
               label: node.label || 'Sin nombre',
               icon: node.icon || '🔲',
-              backgroundColor: node.backgroundColor || '#334155',
+              backgroundColor: node.data.backgroundColor || '#334155',
             },
           })));
           setEdges(data.edges.map(edge => ({

@@ -75,20 +75,20 @@ export default function DashboardClient() {
           data: {
             label: node.data.label,
             backgroundColor: node.background_color || '#334155',
-            icon: node.icon,
-            type: node.type,
-            ruc: node.ruc,
-            website: node.website,
-            logo_url: node.logo_url,
-            email: node.email,
+            icon: node.data.icon,
+            type: node.data.type,
+            ruc: node.data.ruc,
+            website: node.data.website,
+            logo_url: node.data.logo_url,
+            email: node.data.email,
             phone: node.phone,
-            sku: node.sku,
-            price: node.price,
-            lastname: node.lastname,
+            sku: node.data.sku,
+            price: node.data.price,
+            lastname: node.data.lastname,
           },
         })));
     
-        setEdges(data.edges);
+        setEdges(data.data.edges);
       }
     };
     

@@ -22,7 +22,7 @@ export default function CompanyEditor({ node, onClose, onDelete, onUpdate }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-xl w-96 shadow-lg">
+      <div className="bg-white dark:bg-slate-800 dark:text-white p-6 rounded-xl w-96 shadow-lg">
         <h2 className="text-xl font-bold mb-4">Editar Empresa</h2>
 
         <label className="block mb-1 text-sm font-semibold">Nombre</label>
