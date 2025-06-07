@@ -61,7 +61,7 @@ export default function DashboardClient() {
     };
 
     const handleGraphLoaded = (data) => {
-      console.log('📥 Grafo cargado:y', data);
+      console.log('📥 Grafo cargado:', data);
       if (data.graphId !== null) {
         setGraphId(data.graphId);
     
@@ -73,24 +73,14 @@ export default function DashboardClient() {
           },
           type: 'customNode',
           data: {
-            label: node.data.label,
-            backgroundColor: node.background_color || '#334155',
-            icon: node.data.icon,
-            type: node.data.type,
-            ruc: node.data.ruc,
-            website: node.data.website,
-            logo_url: node.data.logo_url,
-            email: node.data.email,
-            phone: node.phone,
-            sku: node.data.sku,
-            price: node.data.price,
-            lastname: node.data.lastname,
+            ...node.data, // ✅ esto es lo importante
           },
         })));
     
-        setEdges(data.data.edges);
+        setEdges(data.edges);
       }
     };
+    
     
     
 

@@ -1,4 +1,5 @@
 const { getConnection } = require('../../lib/database');
+const { sendCurrentPreferences } = require('./preferences'); // 👈 importar
 
 async function login(socket, data) {
   try {
@@ -11,16 +12,29 @@ async function login(socket, data) {
     }
 
     const conn = await getConnection();
-    const [rows] = await conn.execute('SELECT id FROM users WHERE username = ?', [email]);
+    const [rows] = await conn.execute(
+      'SELECT id, username, role_id, theme, language FROM users WHERE username = ?',
+      [email]
+    );
     conn.end();
 
     if (rows.length > 0) {
-      socket.user_id = rows[0].id;
-      console.log(`✅ Usuario autenticado: ${email}, ID: ${socket.user_id}`);
-      
-      // 🚀 Confirmar al frontend que el login fue exitoso
-      console.log('📤 Emisión login-success (backend):', socket.user_id);
-      socket.emit('login-success', { userId: socket.user_id });
+      const user = {
+        id: rows[0].id,
+        email,
+        username: rows[0].username,
+        role_id: rows[0].role_id,
+        theme: rows[0].theme || 'dark',
+        language: rows[0].language || 'es',
+      };
+
+      socket.user = user;
+      console.log(`✅ Usuario autenticado: ${email}, ID: ${user.id}`);
+
+      socket.emit('login-success', { userId: user.id });
+
+      // 🎯 Emitir preferencias automáticamente al frontend
+      sendCurrentPreferences(socket);
     } else {
       console.warn(`⚠️ Usuario no encontrado para email: ${email}`);
       socket.emit('login-failed', { reason: 'Usuario no encontrado.' });
