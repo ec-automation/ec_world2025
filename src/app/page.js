@@ -20,7 +20,7 @@ function InnerPage() {
         </footer> */}
         <footer className="p-4 bg-black text-white text-center">
   <p className="mb-4 text-gray-600">
-    Creado por Edgar Soarez de EC-HOME AUTOMATION PERU SAC © Copyright 2025
+    Creado por Edgar f Soarez A de EC-HOME AUTOMATION PERU SAC © Copyright 2025
   </p>
 </footer>
 
