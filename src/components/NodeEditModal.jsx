@@ -1,59 +1,49 @@
-'use client';
+// ✅ NodeEditModal.jsx
+import React from 'react';
+import CompanyEditor from './node-editors/CompanyEditor';
+import ClientEditor from './node-editors/ClientEditor';
 
-import { useState } from 'react';
-
-export default function NodeEditModal({ node, onClose, onSave }) {
-  const [label, setLabel] = useState(node.data.label || '');
-  const [backgroundColor, setBackgroundColor] = useState(node.data.backgroundColor || '#f1f5f9');
-  const [description, setDescription] = useState(node.data.description || '');
-
-  const handleSave = () => {
-    onSave(node.id, { label, backgroundColor, description });
+export default function NodeEditModal({ node, onClose, onDelete, onUpdate }) {
+  const renderEditor = () => {
+    console.log('🧠 Editor cargando tipo lógico:', node.data?.type);
+    console.log('📦 Datos completos del nodo:', node);
+    switch (node.data.type) {
+      case 'company':
+        return <CompanyEditor node={node} onUpdate={onUpdate} />;
+      case 'client':
+        return <ClientEditor node={node} onUpdate={onUpdate} />;
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-red-500">
+              No hay editor definido para el tipo lógico "{node.data?.type ?? 'undefined'}"
+              (type visual: "{node.type}")
+            </p>
+          </div>
+        );
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 p-6 rounded shadow-lg w-96">
-        <h2 className="text-lg font-bold mb-4 text-black dark:text-white">
-          Editar nodo: {node.id}
-        </h2>
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-slate-800 dark:text-white p-6 rounded-xl w-96 shadow-lg">
+        <h2 className="text-xl font-bold mb-4">Editar {node.data.type}</h2>
 
-        <label className="block mb-2 text-sm font-medium text-black dark:text-white">Nombre</label>
-        <input
-          type="text"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          className="w-full p-2 mb-4 border rounded dark:bg-slate-700 dark:text-white"
-        />
+        {renderEditor()}
 
-        <label className="block mb-2 text-sm font-medium text-black dark:text-white">Color de fondo</label>
-        <input
-          type="color"
-          value={backgroundColor}
-          onChange={(e) => setBackgroundColor(e.target.value)}
-          className="w-full p-2 mb-4 border rounded h-10"
-        />
-
-        <label className="block mb-2 text-sm font-medium text-black dark:text-white">Descripción</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className="w-full p-2 border rounded dark:bg-slate-700 dark:text-white"
-        />
-
-        <div className="flex justify-end mt-4">
+        <div className="flex justify-between mt-6">
           <button
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            onClick={() => onDelete(node)}
+          >
+            Eliminar {node.data.type}
+          </button>
+
+          <button
+            className="px-4 py-2 border rounded"
             onClick={onClose}
-            className="mr-2 px-4 py-2 bg-gray-500 text-white rounded"
           >
             Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
-            Guardar
           </button>
         </div>
       </div>

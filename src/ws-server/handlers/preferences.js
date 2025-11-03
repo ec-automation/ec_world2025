@@ -1,52 +1,40 @@
-const { getConnection } = require('../../lib/database');
+// src/ws-server/handlers/preferences.js
 
 async function updatePreferences(socket, data) {
   try {
-    let { theme, language } = data;
+    const { theme, language } = data;
 
-    if (!socket.user_id) {
-      console.warn('⚠️ No hay usuario autenticado para actualizar preferencias.');
+    if (!socket.user) {
+      console.warn('⚠️ No hay usuario en sesión en updatePreferences');
       return;
     }
 
-    const conn = await getConnection();
+    // Guardar en memoria del socket
+    socket.user.theme = theme || socket.user.theme;
+    socket.user.language = language || socket.user.language;
 
-    // ✅ Si vienen ambos, actualizamos ambos
-    if (theme !== undefined && language !== undefined) {
-      await conn.execute(
-        `UPDATE users SET theme = ?, language = ? WHERE id = ?`,
-        [theme, language, socket.user_id]
-      );
-    }
-    // ✅ Si solo viene theme
-    else if (theme !== undefined) {
-      await conn.execute(
-        `UPDATE users SET theme = ? WHERE id = ?`,
-        [theme, socket.user_id]
-      );
-    }
-    // ✅ Si solo viene language
-    else if (language !== undefined) {
-      await conn.execute(
-        `UPDATE users SET language = ? WHERE id = ?`,
-        [language, socket.user_id]
-      );
-    }
-    else {
-      console.warn('⚠️ No se enviaron cambios válidos de preferencias.');
-    }
+    console.log(`🎨 Preferencias actualizadas: ${socket.user.theme}, ${socket.user.language}`);
 
-    conn.end();
+    // (opcional) Aquí puedes actualizar en base de datos si deseas persistir
 
-    console.log(`🎨 Preferencias actualizadas para user_id ${socket.user_id}:`);
-    console.log(`    Tema: ${theme !== undefined ? theme : "(sin cambio)"}`);
-    console.log(`    Idioma: ${language !== undefined ? language : "(sin cambio)"}`);
-    
-    socket.emit('preferences-updated', { success: true });
+    // Notificar al cliente
+    socket.emit('user-preferences', {
+      theme: socket.user.theme,
+      language: socket.user.language,
+    });
   } catch (err) {
     console.error('❌ Error actualizando preferencias:', err);
-    socket.emit('preferences-updated', { success: false, error: err.message });
+    socket.emit('error', { message: 'Error actualizando preferencias' });
   }
 }
 
-module.exports = { updatePreferences };
+function sendCurrentPreferences(socket) {
+  if (socket.user) {
+    socket.emit('user-preferences', {
+      theme: socket.user.theme || 'dark',
+      language: socket.user.language || 'es',
+    });
+  }
+}
+
+module.exports = { updatePreferences, sendCurrentPreferences };

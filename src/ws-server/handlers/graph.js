@@ -2,6 +2,7 @@ const { getConnection } = require('../../lib/database');
 
 async function loadGraph(socket, data) {
   try {
+    const user = socket.user;
     console.log('📥 Cliente solicita cargar grafo');
 
     if (!socket.user_id) {
@@ -11,44 +12,90 @@ async function loadGraph(socket, data) {
     }
 
     const conn = await getConnection();
-    const [graphs] = await conn.execute(
-      `SELECT id FROM graphs WHERE user_id = ? LIMIT 1`,
-      [socket.user_id]
+
+    // Obtener el graph del usuario
+    const [graphRows] = await conn.execute(
+      'SELECT id FROM graphs WHERE user_id = ? LIMIT 1',
+      [user.id]
     );
 
-    let graphId = null;
-
-    if (graphs.length === 0) {
-      console.log('🆕 No se encontró grafo, creando uno nuevo...');
-      const [result] = await conn.execute(
-        `INSERT INTO graphs (user_id, created_at) VALUES (?, NOW())`,
-        [socket.user_id]
-      );
-      graphId = result.insertId;
-
-      console.log('✅ Grafo creado con ID:', graphId);
-
-      socket.emit('graph-created', { graphId });
-    } else {
-      graphId = graphs[0].id;
+    if (graphRows.length === 0) {
+      console.warn('⚠️ No se encontró grafo para el usuario:', user.id);
+      socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
+      conn.end();
+      return;
     }
 
-    const [nodes] = await conn.execute(
-      `SELECT id, label, type, position_x AS x, position_y AS y FROM nodes WHERE graph_id = ?`,
-      [graphId]
-    );
-    const [edges] = await conn.execute(
-      `SELECT id, source, target FROM edges WHERE graph_id = ?`,
-      [graphId]
-    );
+    const graphId = graphRows[0].id;
+
+    // Obtener nodos con LEFT JOIN condicionales
+    const [nodes] = await conn.execute(`
+      SELECT 
+        n.id,
+        n.graph_id,
+        n.label,
+        n.icon,
+        n.background_color,
+        n.position_x,
+        n.position_y,
+        n.type,
+        c.ruc,
+        c.website,
+        c.logo_url,
+        cl.email,
+        cl.phone
+      FROM nodes n
+      LEFT JOIN companies c ON c.node_id = n.id AND n.type = 'company'
+      LEFT JOIN clients cl ON cl.node_id = n.id AND n.type = 'client'
+      WHERE n.graph_id = ?
+    `, [graphId]);
+
+    // Obtener edges
+    const [edges] = await conn.execute(`
+      SELECT id, source, target
+      FROM edges
+      WHERE graph_id = ?
+    `, [graphId]);
 
     conn.end();
 
-    console.log('✅ Grafo cargado:', { graphId, nodes, edges });
-    socket.emit('graph-loaded', { graphId, nodes, edges });
+    const formattedNodes = nodes.map(node => ({
+      id: String(node.id),
+      type: 'customNode',
+      position: {
+        x: node.position_x ?? 100,
+        y: node.position_y ?? 100,
+      },
+      data: {
+        label: node.label,
+        backgroundColor: node.background_color,
+        icon: node.icon,
+        type: node.type,
+        ruc: node.ruc,
+        website: node.website,
+        logo_url: node.logo_url,
+        email: node.email,
+        phone: node.phone,
+      }
+    }));
+
+    const formattedEdges = edges.map(edge => ({
+      id: String(edge.id),
+      source: String(edge.source),
+      target: String(edge.target),
+    }));
+
+    socket.emit('graph-loaded', {
+      graphId,
+      nodes: formattedNodes,
+      edges: formattedEdges
+    });
+
+    console.log(`📤 Grafo enviado (ID: ${graphId}) con ${formattedNodes.length} nodos`);
+
   } catch (err) {
-    console.error('❌ Error al cargar grafo:', err);
-    socket.emit('graph-loaded', { graphId: null, nodes: [], edges: [] });
+    console.error('❌ Error cargando grafo:', err);
+    socket.emit('error', { message: 'Error cargando grafo' });
   }
 }
 

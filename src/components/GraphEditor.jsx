@@ -1,244 +1,172 @@
+// ✅ GraphEditor.jsx
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import { useTranslation } from 'react-i18next';
 import { useSocket } from '../components/WebSocketProvider';
-import { uploadLogoToS3 } from '../ws-server/utils/uploadLogoToS3';
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  addEdge,
-  useEdgesState,
-  useNodesState,
-  ReactFlowProvider,
-  Panel,
-} from 'reactflow';
+import useDarkMode from '../hooks/useDarkMode';
+import GeoStatus from './GeoStatus';
+import Ec_nav_bar from './navbar';
+import GraphSidebarPalette from './GraphSidebarPalette';
+import { applyNodeChanges } from 'reactflow'; 
+import ReactFlowProvider from 'reactflow';
 import 'reactflow/dist/style.css';
 import CustomNodeComponent from './CustomNodeComponent';
-import GraphSidebarPalette from './GraphSidebarPalette';
 import NodeEditModal from './NodeEditModal';
+import GraphCanvas from './GraphCanvas';
 
 const nodeTypes = { customNode: CustomNodeComponent };
-const STORAGE_KEY = 'ec-flow-data';
-const VIEWPORT_KEY = 'ec-viewport';
 
-function GraphContent({ theme }) {
-  const { sendMessage, onMessage } = useSocket();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+export default function GraphEditor() {
+  const { socket, sendMessage, onMessage } = useSocket();
+  const { data: session, status } = useSession();
+  const { t, i18n } = useTranslation();
+  const { setTheme } = useDarkMode();
+  const [geoInfo, setGeoInfo] = useState(null);
+  const [nodes, setNodes, onNodesChangeInternal] = useState([]);
+  const [edges, setEdges] = useState([]);
   const [graphId, setGraphId] = useState(null);
-  const [idCounter, setIdCounter] = useState(1);
   const [showModal, setShowModal] = useState(false);
-  const [promptText, setPromptText] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);
 
   useEffect(() => {
-    if (!sendMessage || !onMessage) return;
-
-    let graphRequested = false;
-
-    const unsubUserPreferences = onMessage('user-preferences', () => {
-      if (!graphRequested) {
-        console.log('📥 Usuario autenticado, solicitando carga de grafo...');
-        sendMessage('load-graph', {});
-        graphRequested = true;
-      }
-    });
-
-    const unsubGraphLoaded = onMessage('graph-loaded', (data) => {
-      console.log('📥 Grafo cargado:', data);
-      if (data.graphId === null) {
-        console.log('🆕 Creando primer grafo para el usuario...');
-        sendMessage('create-graph', {});
-      } else {
-        setGraphId(data.graphId);
-        setNodes(data.nodes.map(node => ({
-          ...node,
-          position: node.position || { x: Math.random() * 400, y: Math.random() * 400 }
-        })));
-        setEdges(data.edges);
-      }
-    });
-
-    const unsubGraphCreated = onMessage('graph-created', (data) => {
-      console.log('🆕 Grafo creado:', data);
-      setGraphId(data.graphId);
-    });
-
-    return () => {
-      if (typeof unsubUserPreferences === 'function') unsubUserPreferences();
-      if (typeof unsubGraphLoaded === 'function') unsubGraphLoaded();
-      if (typeof unsubGraphCreated === 'function') unsubGraphCreated();
-    };
-  }, [sendMessage, onMessage]);
-
-  const handleDrop = useCallback(async (event) => {
-    event.preventDefault();
-    console.log('📦 Detectado evento drop');
-    const raw = event.dataTransfer.getData('application/ec-node');
-    if (!raw) {
-      console.warn('⚠️ No se encontró data de drag');
-      return;
+    if (status === 'authenticated' && socket && session?.user?.email) {
+      const { name, email } = session.user;
+      console.log('📤 Emitiendo login vía socket1:', { name, email });
+      socket.emit('login', { name, email });
     }
+  }, [status, socket, session]);
 
-    if (!graphId) {
-      console.warn('⚠️ No hay graphId aún disponible');
-      return;
-    }
+  useEffect(() => {
+    if (socket) {
+      const handleUserPreferences = (prefs) => {
+        console.log('🌟 Preferencias recibidas:', prefs);
+        if (prefs.theme) setTheme(prefs.theme);
+        if (prefs.language) i18n.changeLanguage(prefs.language);
+      };
 
-    const item = JSON.parse(raw);
-    console.log('🧩 Item arrastrado:', item);
+      const handleUserInfo = (info) => {
+        console.log('🌐 Info de conexión recibida:', info);
+        setGeoInfo(info);
+      };
 
-    const position = { x: event.clientX - 250, y: event.clientY - 100 };
-
-    if (item.type === 'company') {
-      console.log('🏢 Creando nueva empresa...');
-
-      const name = `Empresa ${idCounter}`;
-      const ruc = Math.floor(Math.random() * 1e11).toString().padStart(11, '1');
-      const website = 'https://ecautomation.com';
-
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = 'image/*';
-      fileInput.click();
-
-      fileInput.onchange = async (e) => {
-        const file = e.target.files[0];
-
-        let logoUrl = null;
-        if (file) {
-          console.log('📸 Imagen seleccionada para subir');
-          logoUrl = await uploadLogoToS3(file, idCounter);
-        } else {
-          console.log('📸 No se seleccionó imagen');
+      const handleLoginSuccess = () => {
+        console.log('✅ Login confirmado en frontend y');
+        if (socket) {
+          console.log('📥 Usuario autenticado, solicitando carga de grafo...');
+          socket.emit('load-graph', {});
         }
+      };
 
-        const payload = {
-          graph_id: graphId,
-          name,
-          ruc,
-          website,
-          logo_url: logoUrl,
-        };
+      const handleGraphLoaded = (data) => {
+        console.log('📥 Grafo cargado: 2', data);
+        if (data.graphId !== null) {
+          setGraphId(data.graphId);
+          setNodes(data.nodes.map((node) => ({
+            id: String(node.id),
+            position: node.x !== null && node.y !== null
+              ? { x: node.x, y: node.y }
+              : { x: 100, y: 100 },
+            type: 'customNode',
+            data: {
+              label: node.label || 'Sin nombre',
+              icon: node.icon || '🔲',
+              backgroundColor: node.data.backgroundColor || '#334155',
+            },
+          })));
+          setEdges(data.edges.map(edge => ({
+            id: String(edge.id),
+            source: String(edge.source),
+            target: String(edge.target),
+          })));
+        }
+      };
 
-        console.log('🚀 Enviando create-company:', payload);
-        sendMessage('create-company', payload);
+      socket.on('user-preferences', handleUserPreferences);
+      socket.on('user-info', handleUserInfo);
+      socket.on('login-success', handleLoginSuccess);
+      socket.on('graph-loaded', handleGraphLoaded);
 
-        console.log('🚀 Enviando create-node:', {
-          graph_id: graphId,
-          type: item.type,
-          position,
-          label: name,
-        });
-        sendMessage('create-node', {
-          graph_id: graphId,
-          type: item.type,
-          position,
-          label: name,
-        });
-
-        setIdCounter((prev) => prev + 1);
+      return () => {
+        socket.off('user-preferences', handleUserPreferences);
+        socket.off('user-info', handleUserInfo);
+        socket.off('login-success', handleLoginSuccess);
+        socket.off('graph-loaded', handleGraphLoaded);
       };
     }
-  }, [graphId, idCounter, sendMessage]);
+  }, [socket, setTheme, i18n]);
 
-  const handleDragOver = useCallback((event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
+  const onNodesChange = useCallback((changes) => {
+    console.log('🌀 Cambios detectados en nodos:', changes);
+    setNodes((nds) => applyNodeChanges(changes, nds));
 
-  const handleNodeEdit = (id, newData) => {
-    setNodes((nds) =>
-      nds.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, ...newData } } : node
-      )
-    );
-    setSelectedNode(null);
-  };
+    changes.forEach(change => {
+      if (change.type === 'position' && change.dragging === false) {
+        console.log('📍 Nodo movido:', change);
+        if (change.id && graphId && sendMessage) {
+          const movedNode = nodes.find((n) => n.id === change.id);
+          if (movedNode) {
+            console.log('📤 Enviando nueva posición del nodo:', movedNode.position);
+            sendMessage('update-node-position', {
+              node_id: movedNode.id,
+              x: movedNode.position.x,
+              y: movedNode.position.y,
+            });
+          }
+        }
+      }
+    });
+  }, [nodes, graphId, sendMessage]);
 
   return (
-    <div className="flex h-full w-full">
-      <GraphSidebarPalette />
-      <div className="flex-1 h-full relative">
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-black p-4 rounded shadow-lg w-96">
-              <h2 className="text-lg font-bold mb-2 text-black dark:text-white">Ingresa tu prompt</h2>
-              <textarea
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                className="w-full p-2 rounded border dark:bg-slate-700 dark:text-white"
-                rows={4}
-                placeholder="Ej. Crea un sistema de reservas con login y pagos"
-              />
-              <div className="flex justify-end mt-2">
-                <button className="bg-gray-500 text-white px-3 py-1 rounded mr-2" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </button>
-                <button className="bg-green-600 text-white px-3 py-1 rounded" onClick={() => {}}>
-                  Enviar
-                </button>
+    <main className="flex flex-col min-h-screen">
+      <Ec_nav_bar />
+
+      {typeof window !== 'undefined' && geoInfo && (
+        <div className="p-2 flex justify-center">
+          <GeoStatus info={geoInfo} />
+        </div>
+      )}
+
+      <div className="flex-grow flex flex-col items-center justify-center p-6">
+        <div className="w-full h-[600px] bg-white dark:bg-black rounded shadow overflow-hidden">
+          <ReactFlowProvider>
+            <div className="flex h-full w-full">
+              <GraphSidebarPalette />
+              <div className="flex-1 h-full relative">
+                <GraphCanvas
+                  nodes={nodes}
+                  edges={edges}
+                  nodeTypes={nodeTypes}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={setEdges}
+                  setEdges={setEdges}
+                  graphId={graphId}
+                  sendMessage={sendMessage}
+                  onNodeDoubleClick={(event, node) => {
+                    setSelectedNode(node);
+                    setShowModal(true);
+                  }}
+                />
               </div>
             </div>
-          </div>
-        )}
-
-        {selectedNode && (
-          <NodeEditModal
-            node={selectedNode}
-            onClose={() => setSelectedNode(null)}
-            onSave={handleNodeEdit}
-          />
-        )}
-
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={(connection) => setEdges((eds) => addEdge(connection, eds))}
-          onMoveEnd={(viewport) => localStorage.setItem(VIEWPORT_KEY, JSON.stringify(viewport))}
-          onEdgeClick={(event, edge) => {
-            event.stopPropagation();
-            setEdges((eds) => eds.filter((e) => e.id !== edge.id));
-          }}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          fitView
-        >
-          <Controls />
-          <Background />
-          <Panel position="top-right">
-            <button onClick={() => {}} className="m-1 px-2 py-1 bg-blue-500 text-white rounded">+ Nodo</button>
-            <button onClick={() => setEdges([]) || setNodes([])} className="m-1 px-2 py-1 bg-red-500 text-white rounded">🗑 Borrar</button>
-            <button onClick={() => {
-              localStorage.removeItem(STORAGE_KEY);
-              localStorage.removeItem(VIEWPORT_KEY);
-              window.location.reload();
-            }} className="m-1 px-2 py-1 bg-gray-700 text-white rounded">🔄 Reset</button>
-          </Panel>
-          <Panel position="bottom-right">
-            <button onClick={() => setShowModal(true)} className="m-1 px-2 py-1 bg-emerald-600 text-white rounded">💡 Generar con IA</button>
-          </Panel>
-        </ReactFlow>
+          </ReactFlowProvider>
+        </div>
       </div>
-    </div>
-  );
-}
 
-export default function GraphEditor() {
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'light';
-    return localStorage.theme || 'light';
-  });
+      <NodeEditModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        node={selectedNode}
+        updateNode={(updated) => {
+          setNodes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
+        }}
+      />
 
-  return (
-    <div className="w-full h-[600px] bg-white dark:bg-black rounded shadow overflow-hidden">
-      <ReactFlowProvider>
-        <GraphContent theme={theme} />
-      </ReactFlowProvider>
-    </div>
+      <footer className="p-4 bg-black text-white text-center">
+        <p className="mb-4 text-gray-600">{t('Copyright')}</p>
+      </footer>
+    </main>
   );
 }
