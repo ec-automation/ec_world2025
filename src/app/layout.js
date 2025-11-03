@@ -24,7 +24,9 @@ export default function RootLayout({ children }) {
 
         style={{
           backgroundImage: `url("../../system_images/bg2.jpg")`,
-          backgroundRepeat: 'no-repeat', 
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center', 
         }}
       >
     
