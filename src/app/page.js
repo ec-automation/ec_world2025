@@ -15,14 +15,14 @@ function InnerPage() {
         <div className="flex-grow flex flex-col items-center justify-center p-6">
           {/* tu contenido */}
         </div>
-{/*         <footer className="p-4 bg-black text-white text-center">
+         <footer className="p-4 bg-black text-white text-center">
           <p className="mb-4 text-gray-600">{t("Copyright")}</p>
-        </footer> */}
-        <footer className="p-4 bg-black text-white text-center">
+        </footer> 
+{/*         <footer className="p-4 bg-black text-white text-center">
   <p className="mb-4 text-gray-600">
     Creado por Edgar f Soarez A de EC-HOME AUTOMATION PERU SAC © Copyright 2025
   </p>
-</footer>
+</footer> */}
 
       </main>
     </WebSocketProvider>

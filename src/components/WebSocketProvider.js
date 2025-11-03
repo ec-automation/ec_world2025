@@ -9,9 +9,18 @@ export const WebSocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [status, setStatus] = useState('disconnected');
 
-  useEffect(() => {
-    const socketIo = io('ws://ecautomation2.ddns.net:4000', {
+/*   useEffect(() => {
+    console.log('WS_URL:', process.env.NEXT_PUBLIC_WS_URL);
+    //const socketIo = io(process.env.NEXT_PUBLIC_WS_URL, {
+    const socketIo = io("ws://localhost:8080", {
       transports: ['websocket'],
+    }); */
+     useEffect(() => {
+    const socketIo = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080', {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
 
     setSocket(socketIo);
