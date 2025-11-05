@@ -42,7 +42,7 @@ export const Ec_nav_bar = () => {
   return (
     <div className="w-screen h-20 grid grid-cols-4 border-1 bg-black bg-opacity-60">
       <a href="/" className="col-span-1 flex items-center justify-center">
-        <img src="./system_images/Ec_automation_logo.png" className="h-12 w-full object-contain" alt="Logo" />
+        <img src="/system_images/Ec_automation_logo.png" className="h-12 w-full object-contain" alt="Logo" />
       </a>
 
       <div className="col-span-2 grid grid-cols-3 md:grid-cols-8">

@@ -22,7 +22,7 @@ export const Ec_nav_bar = () => {
     </div> */}
     <a href="/" className="col-span-1">
 {/*       <img src="./system_images/logo_png.png" className="h-20 w-full object-contain" alt="Logo" /> */}
-      <img src="./system_images/Ec_automation_logo.png" className="h-20 w-full object-contain" alt="Logo" />
+      <img src="/system_images/Ec_automation_logo.png" className="h-20 w-full object-contain" alt="Logo" />
       
     </a>
 
