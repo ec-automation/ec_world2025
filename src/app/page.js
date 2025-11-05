@@ -14,7 +14,9 @@ function InnerPage() {
         <Ec_nav_bar />
         <div className="flex-grow flex flex-col items-center justify-center p-6">
           {/* tu contenido */}
-          <p>testing 1234</p>
+          {/* <p>testing 12345</p> */}
+          <p>{t("Main_greeting")}</p>
+
         </div>
          <footer className="p-4 bg-black text-white text-center">
           <p className="mb-4 text-gray-600">{t("Copyright")}</p>

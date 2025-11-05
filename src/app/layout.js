@@ -23,10 +23,10 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-no-repeat bg-cover bg-center min-h-screen`}
 
         style={{
-          backgroundImage: `url("../../system_images/bg2.jpg")`,
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center', 
+          backgroundImage: "url(/system_images/bg2.jpg)",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+          backgroundPosition: "center", 
         }}
       >
     
