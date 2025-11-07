@@ -10,7 +10,7 @@ export const WebSocketProvider = ({ children }) => {
   const [status, setStatus] = useState('disconnected');
 
   useEffect(() => {
-    const socketIo = io('ws://ecautomation2.ddns.net:4000', {
+    const socketIo = io('http://localhost:8080', {
       transports: ['websocket'],
     });
 
